@@ -37,7 +37,7 @@ untypedRow = 10;
 _DBRow with more than one field:
 ---
 struct S { int i; string s; }
-alias Tuple!(int, "i", string, "s")) TS;
+alias Tuple!(int, "i", string, "s") TS;
 
 // all three rows are compatible
 DBRow!S row1;
