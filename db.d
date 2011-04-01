@@ -1,3 +1,11 @@
+/**
+Common relational database interfaces.
+
+Copyright: Copyright Piotr Szturmaj 2011-.
+License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors: Piotr Szturmaj
+*/
+
 module db;
 
 import std.conv, std.traits, std.typecons, std.typetuple, std.variant;
@@ -166,6 +174,11 @@ struct DBRow(Specs...)
     
     static if (hasStaticLength)
     {
+        /**
+        Checks if received field count matches field count of this row type.
+        
+        This is used internally by clients and it applies only to DBRow types, which have static number of fields.
+        */
         static pure void checkReceivedFieldCount(int fieldCount)
         {
             if (fieldTypes.length != fieldCount)

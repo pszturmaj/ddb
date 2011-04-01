@@ -1,3 +1,90 @@
+/**
+PostgreSQL client implementation.
+
+Features:
+$(UL
+    $(LI Standalone (does not depend on libpq))
+    $(LI Binary formatting (avoids parsing overhead))
+    $(LI Prepared statements)
+    $(LI Parametrized queries (partially working))
+)
+
+TODOs:
+$(UL
+    $(LI Transaction support)
+    $(LI Asynchronous notifications)
+    $(LI Better memory management)
+    $(LI More friendly PGFields)
+)
+
+Bugs:
+$(UL
+    $(LI Support only cleartext and MD5 authentication)
+    $(LI Unfinished parameter handling)
+)
+
+Examples:
+---
+import std.stdio;
+import postgres;
+
+int main(string[] argv)
+{
+    auto conn = new PGConnection;
+    conn.open([
+        "host" : "localhost",
+        "database" : "test",
+        "user" : "postgres",
+        "password" : "postgres"
+    ]);
+
+    scope(exit) conn.close;
+
+    auto cmd = new PGCommand(conn, "SELECT typname, typlen FROM pg_type");
+    auto result = cmd.executeQuery;
+    
+    try
+    {
+        foreach (row; result)
+        {
+            writeln(row[0], ", ", row[1]);
+        }
+    }
+    finally
+    {
+        result.close;
+    }
+
+    return 0;
+}
+---
+
+Copyright: Copyright Piotr Szturmaj 2011-.
+License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors: Piotr Szturmaj
+*//*
+Documentation contains portions copied from PostgreSQL manual (mainly field information and
+connection parameters description). License:
+
+Portions Copyright (c) 1996-2010, The PostgreSQL Global Development Group
+Portions Copyright (c) 1994, The Regents of the University of California
+
+Permission to use, copy, modify, and distribute this software and its documentation for any purpose,
+without fee, and without a written agreement is hereby granted, provided that the above copyright
+notice and this paragraph and the following two paragraphs appear in all copies.
+
+IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR DIRECT,
+INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
+ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY
+OF CALIFORNIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERSITY OF
+CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS,
+OR MODIFICATIONS.
+*/
+
 module postgres;
 
 import std.socket, std.socketstream;
@@ -95,7 +182,7 @@ class PGStream : SocketStream
         union U
         {
             double d;
-            long l;			
+            long l;
         }
         
         U u;
@@ -400,7 +487,7 @@ struct Message
                     return _to!T(read!bool);
                 else
                     convError!T;
-            }		
+            }
             case 26, 24, 2202, 2203, 2204, 2205, 2206, 3734, 3769: // oid and reg*** aliases
             {
                 static if (isConvertible!(T, uint))
@@ -728,11 +815,13 @@ class PGConnection
         uint[uint] arrayTypes;
         uint[][uint] compositeTypes;
         string[uint][uint] enumTypes;
+        bool activeResultSet;
         
         string reservePrepared()
         {
             synchronized (this)
             {
+                
                 return to!string(lastPrepared++);
             }
         }
@@ -939,8 +1028,14 @@ class PGConnection
             return response;
         }
         
+        void checkActiveResultSet()
+        {
+            enforce(!activeResultSet, "There's active result set, which must be closed first.");
+        }
+        
         void prepare(string statementName, string query, PGParameters params)
         {
+            checkActiveResultSet();
             sendParseMessage(statementName, query, params.getOids());
             sendFlushMessage();
             
@@ -968,9 +1063,41 @@ class PGConnection
                 }
             }
         }
+
+        void unprepare(string statementName)
+        {
+            checkActiveResultSet();
+            sendCloseMessage(DescribeType.Statement, statementName);
+            sendFlushMessage();
+            
+        receive:
+            
+            Message msg = getMessage();
+            
+            switch (msg.type)
+            {
+                case 'E':
+                {
+                    // ErrorResponse
+                    ResponseMessage response = handleResponseMessage(msg);
+                    throw new ServerErrorException(response);
+                }
+                case '3':
+                {
+                    // CloseComplete
+                    return;
+                }
+                default:
+                {
+                    // async notice, notification
+                    goto receive;
+                }
+            }
+        }
         
         PGFields bind(string portalName, string statementName, PGParameters params)
         {
+            checkActiveResultSet();
             sendCloseMessage(DescribeType.Portal, portalName);
             sendBindMessage(portalName, statementName, params);
             sendDescribeMessage(DescribeType.Portal, portalName);
@@ -1042,6 +1169,7 @@ class PGConnection
         
         ulong executeNonQuery(string portalName, out uint oid)
         {
+            checkActiveResultSet();
             ulong rowsAffected = 0;
             
             sendExecuteMessage(portalName, 0);
@@ -1172,10 +1300,12 @@ class PGConnection
             }
             while (msg.type != 'Z'); // ReadyForQuery
         }
-        
+
         PGResultSet!Specs executeQuery(Specs...)(string portalName, ref PGFields fields)
         {
-            PGResultSet!Specs result = new PGResultSet!Specs(this, &fetchRow!Specs);
+            checkActiveResultSet();
+            
+            PGResultSet!Specs result = new PGResultSet!Specs(this, fields, &fetchRow!Specs);
             
             ulong rowsAffected = 0;
             
@@ -1191,10 +1321,14 @@ class PGConnection
                 case 'D':
                 {
                     // DataRow
-                    auto row = fetchRow!Specs(msg, fields);
-                    //result.add(row);
                     
-                    goto receive;
+                    result.row = fetchRow!Specs(msg, fields);
+                    result.validRow = true;
+                    result.nextMsg = getMessage();
+                    
+                    activeResultSet = true;
+                    
+                    return result;
                 }
                 case 'C':
                 {
@@ -1224,6 +1358,7 @@ class PGConnection
                 case 'Z':
                 {
                     // ReadyForQuery
+                    result.nextMsg = msg;
                     return result;
                 }
                 case 'E':
@@ -1452,7 +1587,8 @@ class PGConnection
         {
             auto cmd = new PGCommand(this, "SELECT oid, typelem FROM pg_type WHERE typcategory = 'A'");
             auto result = cmd.executeQuery!(uint, "arrayOid", uint, "elemOid");
-        
+            scope(exit) result.close;
+            
             arrayTypes = null;
             
             foreach (row; result)
@@ -1468,7 +1604,8 @@ class PGConnection
             auto cmd = new PGCommand(this, "SELECT a.attrelid, a.atttypid FROM pg_attribute a JOIN pg_type t ON 
                                      a.attrelid = t.typrelid WHERE a.attnum > 0 ORDER BY a.attrelid, a.attnum");
             auto result = cmd.executeQuery!(uint, "typeOid", uint, "memberOid");
-            
+            scope(exit) result.close;
+
             compositeTypes = null;
             
             uint lastOid = 0;
@@ -1492,6 +1629,7 @@ class PGConnection
         {
             auto cmd = new PGCommand(this, "SELECT enumtypid, oid, enumlabel FROM pg_enum ORDER BY enumtypid, oid");
             auto result = cmd.executeQuery!(uint, "typeOid", uint, "valueOid", string, "valueLabel");
+            scope(exit) result.close;
             
             enumTypes = null;
             
@@ -1595,8 +1733,8 @@ class PGParameters
     ---
     // without spaces between $ and number
     auto cmd = new PGCommand(conn, "INSERT INTO users (name, surname) VALUES ($ 1, $ 2)");
-    cmd.parameters.add(1, PGType.text).value = "John";
-    cmd.parameters.add(2, PGType.text).value = "Doe";
+    cmd.parameters.add(1, PGType.TEXT).value = "John";
+    cmd.parameters.add(2, PGType.TEXT).value = "Doe";
     
     assert(cmd.executeNonQuery == 1);
     ---
@@ -1680,7 +1818,7 @@ class PGCommand
     */
     @property bool isQuery()
     {
-        enforce(_fields !is null, new Exception("bind() must be called first"));
+        enforce(_fields !is null, new Exception("bind() must be called first."));
         return _fields.length > 0;
     }
     
@@ -1698,11 +1836,11 @@ class PGCommand
     /// ditto
     @property string query(string query)
     {
-        enforce(!prepared, "Can't change query for prepared statement");
+        enforce(!prepared, "Can't change query for prepared statement.");
         return _query = query;
     }
     
-    /// 
+    /// If table is with OIDs, it contains last inserted OID.
     @property uint lastInsertOid()
     {
         return _lastInsertOid;
@@ -1721,16 +1859,21 @@ class PGCommand
     /// Prepare this statement, i.e. cache query plan.
     void prepare()
     {
+        enforce(!prepared, "This command is already prepared.");
         preparedName = conn.reservePrepared();
         conn.prepare(preparedName, _query, params);
         prepared = true;
+        params.changed = true;
     }
     
     /// Unprepare this statement. Goes back to normal query planning.
     void unprepare()
     {
+        enforce(prepared, "This command is not prepared.");
+        conn.unprepare(preparedName);
         preparedName = "";
         prepared = false;
+        params.changed = true;
     }
     
     /**
@@ -1753,8 +1896,10 @@ class PGCommand
             // use unnamed statement & portal
             conn.prepare("", _query, params);
             if (bind)
+            {
                 _fields = conn.bind("", "", params);
-            prepared = true;
+                params.changed = false;
+            }
         }
     }
     
@@ -1790,7 +1935,7 @@ class PGCommand
     Params:
     bufferedRows = Number of rows that may be allocated at the same time.
     Returns: InputRange of DBRow!Specs.
-    */	
+    */
     PGResultSet!Specs executeQuery(Specs...)()
     {
         checkPrepared(true);
@@ -1853,15 +1998,7 @@ class PGCommand
         }
         return row;
     }
-    
-    /*
-    TODO:
-    executeScalar returning one first row and first column value
-    executeArray returning array of row values from 1st column
-    */
 }
-
-//alias PGResultSet!(Variant[]) PGResultSetUntyped;
 
 /// Input range of DBRow!Specs
 class PGResultSet(Specs...)
@@ -1873,26 +2010,32 @@ class PGResultSet(Specs...)
     private PGConnection conn;
     private PGFields fields;
     private Row row;
+    private bool validRow;
     private Message nextMsg;
     
-    private this(PGConnection conn, FetchRowDelegate dg)
+    private this(PGConnection conn, ref PGFields fields, FetchRowDelegate dg)
     {
         this.conn = conn;
+        this.fields = fields;
         this.fetchRow = dg;
+        validRow = false;
     }
     
     pure nothrow bool empty()
     {
-        return nextMsg.type != 'D';
+        return !validRow;
     }
     
     void popFront()
     {
-        if (nextMsg.type != 'D')
+        if (nextMsg.type == 'D')
         {
             row = fetchRow(nextMsg, fields);
+            validRow = true;
             nextMsg = conn.getMessage();
         }
+        else
+            validRow = false;
     }
     
     pure nothrow Row front()
@@ -1903,9 +2046,12 @@ class PGResultSet(Specs...)
     /// Closes current result set. It must be closed before issuing another query on the same connection.
     void close()
     {
+        if (nextMsg.type != 'Z')
+            conn.finalizeQuery();
+        conn.activeResultSet = false;
     }
     
-    int opApply(int delegate(ref Row row) dg)
+    int opApaply(int delegate(ref Row row) dg)
     {
         int result = 0;
 
@@ -1920,7 +2066,7 @@ class PGResultSet(Specs...)
         return result;
     }
     
-    int opApply(int delegate(ref size_t i, ref Row row) dg)
+    int opApdply(int delegate(ref size_t i, ref Row row) dg)
     {
         int result = 0;
         
