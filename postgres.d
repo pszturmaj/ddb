@@ -2051,13 +2051,14 @@ class PGResultSet(Specs...)
         conn.activeResultSet = false;
     }
     
-    int opApaply(int delegate(ref Row row) dg)
+    int opApply(int delegate(ref Row row) dg)
     {
         int result = 0;
 
         while (!empty)
         {
             result = dg(row);
+            popFront;
             
             if (result)
                 break;
@@ -2066,17 +2067,19 @@ class PGResultSet(Specs...)
         return result;
     }
     
-    int opApdply(int delegate(ref size_t i, ref Row row) dg)
+    int opApply(int delegate(ref size_t i, ref Row row) dg)
     {
         int result = 0;
-        
-        uint i;
-        //foreach (i, row; rows)
+        size_t i;
+
+        while (!empty)
         {
             result = dg(i, row);
+            popFront;
+            i++;
             
-            //if (result)
-                //break;
+            if (result)
+                break;
         }
         
         return result;
