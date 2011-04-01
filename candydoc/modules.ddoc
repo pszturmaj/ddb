@@ -1,0 +1,3 @@
+MODULES = 
+    $(MODULE .db) 
+    $(MODULE .postgres) 
