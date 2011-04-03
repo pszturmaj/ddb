@@ -95,6 +95,19 @@ In this case row may handle result that either:
 <ul>   <li>has two columns convertible to respectively, string and int</li>
     <li>has one column with composite type compatible with S</li>
 </ul>
+<br><br>
+
+DBRow's instantiated with dynamic array (and thus default Variant[]) provide additional bracket syntax
+for accessing fields:
+<pre class="d_code"><font color=blue>auto</font> value = row[<font color=red>"columnName"</font>];
+</pre>
+There are cases when result contains duplicate column names. Normally column name inside brackets refers
+to the first column of that name. To access other columns with that name, use additional index parameter:
+<pre class="d_code"><font color=blue>auto</font> value = row[<font color=red>"columnName"</font>, 1]; <font color=green>// second column named "columnName"
+</font>
+<font color=blue>auto</font> value = row[<font color=red>"columnName"</font>, 0]; <font color=green>// first column named "columnName"
+</font><font color=blue>auto</font> value = row[<font color=red>"columnName"</font>]; <font color=green>// same as above
+</font></pre>
 
 <br><br>
 <b>Examples:</b><br>
@@ -103,6 +116,16 @@ Default untyped (dynamic) DBRow:
 <u>DBRow</u>!(Variant[]) row2;
 
 <font color=blue>assert</font>(<font color=blue>is</font>(<font color=blue>typeof</font>(row1.base == row2.base)));
+
+<font color=blue>auto</font> cmd = <font color=blue>new</font> PGCommand(conn, <font color=red>"SElECT typname, typlen FROM pg_type"</font>);
+<font color=blue>auto</font> result = cmd.executeQuery;
+
+<font color=blue>foreach</font> (i, row; result)
+{
+    writeln(i, <font color=red>" - "</font>, row[<font color=red>"typname"</font>], <font color=red>", "</font>, row[<font color=red>"typlen"</font>]);
+}
+
+result.close;
 </pre>
 DBRow with only one field:
 <pre class="d_code"><u>DBRow</u>!<font color=blue>int</font> row;
@@ -203,7 +226,7 @@ Composite is a type with static number of fields. These types are:
 		<tr><td id="docfooter">
 			Page was generated with
 			<img src="candydoc/img/candydoc.gif" style="vertical-align:middle; position:relative; top:-1px">
-			on Sun Apr  3 18:26:49 2011
+			on Mon Apr  4 01:40:45 2011
 
 		</td></tr>
 	</table>
