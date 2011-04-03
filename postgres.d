@@ -1332,8 +1332,11 @@ class PGConnection
                 case 'D':
                 {
                     // DataRow
-                    
+                    alias DBRow!Specs Row;
+                        
                     result.row = fetchRow!Specs(msg, fields);
+                    static if (!Row.hasStaticLength)
+                        result.row.columnToIndex = &result.columnToIndex;
                     result.validRow = true;
                     result.nextMsg = getMessage();
                     
@@ -2023,13 +2026,31 @@ class PGResultSet(Specs...)
     private Row row;
     private bool validRow;
     private Message nextMsg;
-    
+    private size_t[][string] columnMap;
+
     private this(PGConnection conn, ref PGFields fields, FetchRowDelegate dg)
     {
         this.conn = conn;
         this.fields = fields;
         this.fetchRow = dg;
         validRow = false;
+
+        foreach (i, field; fields)
+        {
+            size_t[]* indices = field.name in columnMap;
+            
+            if (indices)
+                *indices ~= i;
+            else
+                columnMap[field.name] = [i];
+        }
+    }
+    
+    private size_t columnToIndex(string column, size_t index)
+    {
+        size_t[]* indices = column in columnMap;
+        enforce(indices, "Unknown column name");
+        return (*indices)[index];
     }
     
     pure nothrow bool empty()
@@ -2042,6 +2063,8 @@ class PGResultSet(Specs...)
         if (nextMsg.type == 'D')
         {
             row = fetchRow(nextMsg, fields);
+            static if (!Row.hasStaticLength)
+                row.columnToIndex = &columnToIndex;
             validRow = true;
             nextMsg = conn.getMessage();
         }

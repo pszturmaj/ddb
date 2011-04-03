@@ -65,6 +65,20 @@ $(UL
     $(LI has one column with composite type compatible with S)
 )
 
+_DBRow's instantiated with dynamic array (and thus default Variant[]) provide additional bracket syntax
+for accessing fields:
+---
+auto value = row["columnName"];
+---
+There are cases when result contains duplicate column names. Normally column name inside brackets refers
+to the first column of that name. To access other columns with that name, use additional index parameter:
+---
+auto value = row["columnName", 1]; // second column named "columnName"
+
+auto value = row["columnName", 0]; // first column named "columnName"
+auto value = row["columnName"]; // same as above
+---
+
 Examples:
 
 Default untyped (dynamic) _DBRow:
@@ -73,6 +87,16 @@ DBRow!() row1;
 DBRow!(Variant[]) row2;
 
 assert(is(typeof(row1.base == row2.base)));
+
+auto cmd = new PGCommand(conn, "SElECT typname, typlen FROM pg_type");
+auto result = cmd.executeQuery;
+
+foreach (i, row; result)
+{
+    writeln(i, " - ", row["typname"], ", ", row["typlen"]);
+}
+
+result.close;
 ---
 _DBRow with only one field:
 ---
@@ -136,7 +160,7 @@ struct DBRow(Specs...)
     
     T base;
     alias base this;
-    
+
     static if (isDynamicArray!T && !isSomeString!T)
     {
         alias typeof(T[0]) ElemType;
@@ -153,6 +177,38 @@ struct DBRow(Specs...)
                 base[index] = null;
             else
                 throw new Exception("Cannot set NULL to field " ~ to!string(index) ~ " of " ~ T.stringof ~ ", it is not nullable");
+        }
+        
+        ColumnToIndexDelegate columnToIndex;
+        
+        ElemType opIndex(string column, size_t index)
+        {
+            return base[columnToIndex(column, index)];
+        }
+        
+        ElemType opIndexAssign(ElemType value, string column, size_t index)
+        {
+            return base[columnToIndex(column, index)] = value;
+        }
+        
+        ElemType opIndex(string column)
+        {
+            return base[columnToIndex(column, 0)];
+        }
+        
+        ElemType opIndexAssign(ElemType value, string column)
+        {
+            return base[columnToIndex(column, 0)] = value;
+        }
+
+        ElemType opIndex(size_t index)
+        {
+            return base[index];
+        }
+
+        ElemType opIndexAssign(ElemType value, size_t index)
+        {
+            return base[index] = value;
         }
     }
     else static if (isCompositeType!T)
@@ -233,6 +289,8 @@ struct DBRow(Specs...)
         return to!string(base);
     }
 }
+
+alias size_t delegate(string column, size_t index) ColumnToIndexDelegate;
 
 /**
 Check if type is a composite.
