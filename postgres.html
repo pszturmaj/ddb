@@ -20,11 +20,22 @@ PostgreSQL client implementation.
     <li>Binary formatting (avoids parsing overhead)</li>
     <li>Prepared statements</li>
     <li>Parametrized queries (partially working)</li>
+    <li><a href="http://www.postgresql.org/docs/9.0/static/datatype-enum.html">Enums</a></li>
+    <li><a href="http://www.postgresql.org/docs/9.0/static/arrays.html">Arrays</a></li>
+    <li><a href="http://www.postgresql.org/docs/9.0/static/rowtypes.html">Composite types</a></li>
 </ul>
 
 <br><br>
 <b>TODOs:</b><br>
-<ul>   <li>Transaction support</li>
+<ul>   <li>BigInt/Numeric types support</li>
+    <li>Binary data types support</li>
+    <li>Date/Time types support</li>
+    <li>Geometric types support</li>
+    <li>Network types support</li>
+    <li>Bit string types support</li>
+    <li>UUID type support</li>
+    <li>XML types support</li>
+    <li>Transaction support</li>
     <li>Asynchronous notifications</li>
     <li>Better memory management</li>
     <li>More friendly PGFields</li>
@@ -32,7 +43,7 @@ PostgreSQL client implementation.
 
 <br><br>
 <font color=red>BUGS:</font><br>
-<ul>   <li>Support only cleartext and MD5 authentication</li>
+<ul>   <li>Support only cleartext and MD5 <a href="http://www.postgresql.org/docs/9.0/static/auth-methods.html">authentication</a></li>
     <li>Unfinished parameter handling</li>
 </ul>
 
@@ -893,7 +904,7 @@ Exception if result contains more than one row when throwIfMoreRows is <b>true</
 		<tr><td id="docfooter">
 			Page was generated with
 			<img src="candydoc/img/candydoc.gif" style="vertical-align:middle; position:relative; top:-1px">
-			on Fri Apr  1 22:00:44 2011
+			on Sun Apr  3 18:26:49 2011
 
 		</td></tr>
 	</table>

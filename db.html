@@ -45,14 +45,60 @@ depends on that number:
 <br><br>
 
 <table>   <tr><th>Number of arguments</th> <th>Base type</th></tr>
-    <tr><td>0</td> <td>Variant[]</td></tr>
-    <tr><td>1</td> <td>Specs itself, more precisely Specs[0]</td></tr>
-    <tr><td>&gt;= 2</td> <td>Tuple!Specs</td></tr>
+    <tr><td>0</td> <td>Variant[] <br><br>
+    It is default dynamic row, which can handle arbitrary number of columns and any of their types.
+    </td></tr>
+    <tr><td>1</td> <td>Specs itself, more precisely Specs[0] <br>
+<pre class="d_code">    <font color=blue>struct</font> S { <font color=blue>int</font> i, <font color=blue>float</font> f }
+
+    <u>DBRow</u>!<font color=blue>int</font> rowInt;
+    <u>DBRow</u>!S rowS;
+    <u>DBRow</u>!(Tuple!(string, <font color=blue>bool</font>)) rowTuple;
+    <u>DBRow</u>!(<font color=blue>int</font>[10]) rowSA;
+    <u>DBRow</u>!(<font color=blue>bool</font>[]) rowDA;
+</pre>
+    </td></tr>
+    <tr><td>&gt;= 2</td> <td>Tuple!Specs <br>
+<pre class="d_code">    <u>DBRow</u>!(<font color=blue>int</font>, string) row1; <font color=green>// two arguments
+</font>    <u>DBRow</u>!(<font color=blue>int</font>, <font color=red>"i"</font>) row2; <font color=green>// two arguments
+</font></pre>
+    </td></tr>
 </table>
+<br><br>
+
+If there is only one argument, the semantics depend on its type:
+<br><br>
+
+<table>   <tr><th>Type</th> <th>Semantics</th></tr>
+    <tr><td>base type, such as int</td> <td>Row contains only one column of that type</td></tr>
+    <tr><td>struct</td> <td>Row columns are mapped to fields of the struct in the same order</td></tr>
+    <tr><td>Tuple</td> <td>Row columns are mapped to tuple fields in the same order</td></tr>
+    <tr><td>static array</td> <td>Row columns are mapped to array items, they share the same type</td></tr>
+    <tr><td>dynamic array</td> <td>Same as static array, except that column count may change during runtime</td></tr>
+</table>
+<br><br>
+<b>Note:</b><br>
+String types are treated as base types.
+<br><br>
+
+There is an exception for RDBMSes which are capable of returning arrays and/or composite types. If such a
+database server returns array or composite in one column it may be mapped to 
+<span class="currsymbol">DBRow</span>
+<script>explorer.outline.addDecl('DBRow');</script>
+
+ as if it was many columns.
+For example:
+<pre class="d_code"><font color=blue>struct</font> S { string field1; <font color=blue>int</font> field2; }
+<u>DBRow</u>!S row;
+</pre>
+In this case row may handle result that either:
+<ul>   <li>has two columns convertible to respectively, string and int</li>
+    <li>has one column with composite type compatible with S</li>
+</ul>
 
 <br><br>
 <b>Examples:</b><br>
-Default untyped DBRow:
+Default untyped (dynamic) DBRow:
 <pre class="d_code"><u>DBRow</u>!() row1;
 <u>DBRow</u>!(Variant[]) row2;
 
@@ -157,7 +203,7 @@ Composite is a type with static number of fields. These types are:
 		<tr><td id="docfooter">
 			Page was generated with
 			<img src="candydoc/img/candydoc.gif" style="vertical-align:middle; position:relative; top:-1px">
-			on Fri Apr  1 22:00:44 2011
+			on Sun Apr  3 18:26:49 2011
 
 		</td></tr>
 	</table>

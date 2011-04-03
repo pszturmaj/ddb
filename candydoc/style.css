@@ -39,8 +39,20 @@ table
 	font-size: 10pt;
 	color: #666666;
 	text-align: justify;
+    border-collapse: collapse; /* Added with following td, th style */
 }
 
+/* Added to show up cell borders */
+td, th
+{
+   border: 1px solid black;
+   padding: 8px;
+}
+
+th
+{
+    background-color: #EEEEEE;
+}
 
 /* Style used for all hyperlinks. */
 a:link {  color: #009900; text-decoration: none }
