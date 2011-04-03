@@ -7,10 +7,21 @@ $(UL
     $(LI Binary formatting (avoids parsing overhead))
     $(LI Prepared statements)
     $(LI Parametrized queries (partially working))
+    $(LI $(LINK2 http://www.postgresql.org/docs/9.0/static/datatype-enum.html, Enums))
+    $(LI $(LINK2 http://www.postgresql.org/docs/9.0/static/arrays.html, Arrays))
+    $(LI $(LINK2 http://www.postgresql.org/docs/9.0/static/rowtypes.html, Composite types))
 )
 
 TODOs:
 $(UL
+    $(LI BigInt/Numeric types support)
+    $(LI Binary data types support)
+    $(LI Date/Time types support)
+    $(LI Geometric types support)
+    $(LI Network types support)
+    $(LI Bit string types support)
+    $(LI UUID type support)
+    $(LI XML types support)
     $(LI Transaction support)
     $(LI Asynchronous notifications)
     $(LI Better memory management)
@@ -19,7 +30,7 @@ $(UL
 
 Bugs:
 $(UL
-    $(LI Support only cleartext and MD5 authentication)
+    $(LI Support only cleartext and MD5 $(LINK2 http://www.postgresql.org/docs/9.0/static/auth-methods.html, authentication))
     $(LI Unfinished parameter handling)
 )
 

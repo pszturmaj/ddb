@@ -18,14 +18,56 @@ depends on that number:
 
 $(TABLE
     $(TR $(TH Number of arguments) $(TH Base type))
-    $(TR $(TD 0) $(TD Variant[]))
-    $(TR $(TD 1) $(TD Specs itself, more precisely Specs[0]))
-    $(TR $(TD >= 2) $(TD Tuple!Specs))
+    $(TR $(TD 0) $(TD Variant[] $(BR)$(BR)
+    It is default dynamic row, which can handle arbitrary number of columns and any of their types.
+    ))
+    $(TR $(TD 1) $(TD Specs itself, more precisely Specs[0] $(BR)
+    ---
+    struct S { int i, float f }
+
+    DBRow!int rowInt;
+    DBRow!S rowS;
+    DBRow!(Tuple!(string, bool)) rowTuple;
+    DBRow!(int[10]) rowSA;
+    DBRow!(bool[]) rowDA;
+    ---
+    ))
+    $(TR $(TD >= 2) $(TD Tuple!Specs $(BR)
+    ---
+    DBRow!(int, string) row1; // two arguments
+    DBRow!(int, "i") row2; // two arguments
+    ---
+    ))
+)
+
+If there is only one argument, the semantics depend on its type:
+
+$(TABLE
+    $(TR $(TH Type) $(TH Semantics))
+    $(TR $(TD base type, such as int) $(TD Row contains only one column of that type))
+    $(TR $(TD struct) $(TD Row columns are mapped to fields of the struct in the same order))
+    $(TR $(TD Tuple) $(TD Row columns are mapped to tuple fields in the same order))
+    $(TR $(TD static array) $(TD Row columns are mapped to array items, they share the same type))
+    $(TR $(TD dynamic array) $(TD Same as static array, except that column count may change during runtime))
+)
+Note: String types are treated as base types.
+
+There is an exception for RDBMSes which are capable of returning arrays and/or composite types. If such a
+database server returns array or composite in one column it may be mapped to DBRow as if it was many columns.
+For example:
+---
+struct S { string field1; int field2; }
+DBRow!S row;
+---
+In this case row may handle result that either:
+$(UL
+    $(LI has two columns convertible to respectively, string and int)
+    $(LI has one column with composite type compatible with S)
 )
 
 Examples:
 
-Default untyped _DBRow:
+Default untyped (dynamic) _DBRow:
 ---
 DBRow!() row1;
 DBRow!(Variant[]) row2;
