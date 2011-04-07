@@ -15,8 +15,6 @@ $(UL
 TODOs:
 $(UL
     $(LI BigInt/Numeric types support)
-    $(LI Binary data types support)
-    $(LI Date/Time types support)
     $(LI Geometric types support)
     $(LI Network types support)
     $(LI Bit string types support)
@@ -32,6 +30,7 @@ Bugs:
 $(UL
     $(LI Support only cleartext and MD5 $(LINK2 http://www.postgresql.org/docs/9.0/static/auth-methods.html, authentication))
     $(LI Unfinished parameter handling)
+    $(LI interval is converted to Duration, which does not support months)
 )
 
 Examples:
@@ -108,6 +107,7 @@ import std.md5;
 import std.intrinsic;
 import std.variant;
 import std.algorithm;
+import std.datetime;
 public import db;
 
 private:
@@ -140,6 +140,11 @@ int hton(const int i)
         return cast(int)bswap(cast(uint)i);
     }
 }
+
+enum PGEpochDate = Date(2000, 1, 1);
+enum PGEpochDay = PGEpochDate.dayOfGregorianCal;
+enum PGEpochTime = TimeOfDay(0, 0, 0);
+enum PGEpochDateTime = DateTime(2000, 1, 1, 0, 0, 0);
 
 class PGStream : SocketStream
 {
@@ -207,6 +212,53 @@ class PGStream : SocketStream
         super.writeString(x);
         super.write('\0');
     }
+    
+    void write(ubyte[] x)
+    {
+        static if (x.length.sizeof > int.sizeof)
+            enforce(x.length <= int.max);
+        write(cast(int)x.length);
+        super.write(x);
+    }
+
+    void write(const ref Date x)
+    {
+        write(cast(int)(x.dayOfGregorianCal - PGEpochDay));
+    }
+
+    void write(const ref TimeOfDay x)
+    {
+        write(cast(int)((x - PGEpochTime).total!"usecs"));
+    }
+
+    void write(const ref DateTime x) // timestamp
+    {
+        write(cast(int)((x - PGEpochDateTime).total!"usecs"));
+    }
+    
+    void write(const ref SysTime x) // timestamptz
+    {
+        write(cast(int)((x - SysTime(PGEpochDateTime, UTC())).total!"usecs"));
+    }
+    
+    // BUG: Does not support months
+    void write(const ref Duration x) // interval
+    {
+        int months = 0;
+        int days = cast(int)x.days;
+        long usecs = x.total!"usecs" - convert!("days", "usecs")(days);
+        
+        write(usecs);
+        write(days);
+        write(months);
+    }
+    
+    void writeTimeTz(const ref SysTime x) // timetz
+    {
+        TimeOfDay t = cast(TimeOfDay)x;
+        write(t);
+        write(cast(int)0);
+    }
 }
 
 string MD5toHex(in void[][] data...)
@@ -223,10 +275,10 @@ struct Message
     private size_t position = 0;
     private alias hton ntoh;
     
-    T read(T)()
+    T read(T, Params...)(Params p)
     {
         T value;
-        read(value);
+        read(value, p);
         return value;
     }
     
@@ -321,6 +373,56 @@ struct Message
     void read()(out bool x)
     {
         x = cast(bool)data[position++];
+    }
+    
+    void read()(out ubyte[] x, int len)
+    {
+        enforce(position + len <= data.length);
+        x = data[position .. position + len];
+        position += len;
+    }
+    
+    void read()(out Date x) // date
+    {
+        int days = read!int; // number of days since 1 Jan 2000
+        x = PGEpochDate + dur!"days"(days);
+    }
+    
+    void read()(out TimeOfDay x) // time
+    {
+        long usecs = read!long;
+        x = PGEpochTime + dur!"usecs"(usecs);
+    }
+    
+    void read()(out DateTime x) // timestamp
+    {
+        long usecs = read!long;
+        x = PGEpochDateTime + dur!"usecs"(usecs);
+    }
+    
+    void read()(out SysTime x) // timestamptz
+    {
+        long usecs = read!long;
+        x = SysTime(PGEpochDateTime + dur!"usecs"(usecs), UTC());
+        x.timezone = LocalTime();
+    }
+    
+    // BUG: Does not support months
+    void read()(out Duration x) // interval
+    {
+        long usecs = read!long;
+        int days = read!int;
+        int months = read!int;
+        
+        x = dur!"days"(days) + dur!"usecs"(usecs);
+    }
+    
+    SysTime readTimeTz() // timetz
+    {
+        TimeOfDay time = read!TimeOfDay;
+        int zone = read!int / 60; // originally in seconds, convert it to minutes
+
+        return SysTime(DateTime(Date(0, 1, 1), time), new SimpleTimeZone(zone));
     }
     
     T readComposite(T)()
@@ -548,6 +650,11 @@ struct Message
                 else
                     convError!T;
             }
+            case 17: // bytea
+                static if (isConvertible!(T, ubyte[]))
+                    return _to!T(read!(ubyte[])(len));
+                else
+                    convError!T;
             case 18: // "char"
             {
                 static if (isConvertible!(T, char))
@@ -555,6 +662,36 @@ struct Message
                 else
                     convError!T;
             }
+            case 1082: // date
+                static if (isConvertible!(T, Date))
+                    return _to!T(read!Date);
+                else
+                    convError!T;
+            case 1083: // time
+                static if (isConvertible!(T, TimeOfDay))
+                    return _to!T(read!TimeOfDay);
+                else
+                    convError!T;
+            case 1114: // timestamp
+                static if (isConvertible!(T, DateTime))
+                    return _to!T(read!DateTime);
+                else
+                    convError!T;
+            case 1184: // timestamptz
+                static if (isConvertible!(T, SysTime))
+                    return _to!T(read!SysTime);
+                else
+                    convError!T;
+            case 1186: // interval
+                static if (isConvertible!(T, Duration))
+                    return _to!T(read!Duration);
+                else
+                    convError!T;
+            case 1266: // timetz
+                static if (isConvertible!(T, SysTime))
+                    return _to!T(readTimeTz);
+                else
+                    convError!T;
             case 2249: // record and other composite types
             {
                 static if (isVariantN!T && T.allowed!(Variant[]))
@@ -594,7 +731,7 @@ struct Message
     }
 }
 
-// workaround, because std.conv doesn't support VariantN
+// workaround, because std.conv currently doesn't support VariantN
 template _to(T)
 {
     static if (isVariantN!T)
