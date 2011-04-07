@@ -28,8 +28,6 @@ PostgreSQL client implementation.
 <br><br>
 <b>TODOs:</b><br>
 <ul>   <li>BigInt/Numeric types support</li>
-    <li>Binary data types support</li>
-    <li>Date/Time types support</li>
     <li>Geometric types support</li>
     <li>Network types support</li>
     <li>Bit string types support</li>
@@ -45,6 +43,7 @@ PostgreSQL client implementation.
 <font color=red>BUGS:</font><br>
 <ul>   <li>Support only cleartext and MD5 <a href="http://www.postgresql.org/docs/9.0/static/auth-methods.html">authentication</a></li>
     <li>Unfinished parameter handling</li>
+    <li>interval is converted to Duration, which does not support months</li>
 </ul>
 
 <br><br>
@@ -904,7 +903,7 @@ Exception if result contains more than one row when throwIfMoreRows is <b>true</
 		<tr><td id="docfooter">
 			Page was generated with
 			<img src="candydoc/img/candydoc.gif" style="vertical-align:middle; position:relative; top:-1px">
-			on Mon Apr  4 01:40:45 2011
+			on Fri Apr  8 01:34:11 2011
 
 		</td></tr>
 	</table>
