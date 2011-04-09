@@ -437,16 +437,17 @@ struct Message
             {
                 string s = "";
                 
-                foreach (i, type; fieldTypes)
+                foreach (i; 0 .. fieldTypes.length)
                 {
-                    s ~= "read(fieldOid);";
-                    s ~= "read(fieldLen);";
-                    s ~= "if (fieldLen == -1)";
-                    s ~= text("record.setNull!(", i, ")();");
+                    s ~= "read(fieldOid);\n";
+                    s ~= "read(fieldLen);\n";
+                    s ~= "if (fieldLen == -1)\n";
+                    s ~= text("record.setNull!(", i, ");\n");
                     s ~= "else\n";
                     s ~= text("record.set!(fieldTypes[", i, "], ", i, ")(",
                               "readBaseType!(fieldTypes[", i, "])(fieldOid, fieldLen)",
-                              ");");
+                              ");\n");
+                    // text() doesn't work with -inline option, CTFE bug
                 }
                 
                 return s;
@@ -1322,6 +1323,7 @@ class PGConnection
             
             sendExecuteMessage(portalName, 0);
             sendSyncMessage();
+            sendFlushMessage();
             
         receive:
             
@@ -1388,20 +1390,21 @@ class PGConnection
             static if (Row.hasStaticLength)
             {
                 alias Row.fieldTypes fieldTypes;
-            
+
                 static string genFieldAssigns() // CTFE
                 {
                     string s = "";
                     
-                    foreach (i, type; fieldTypes)
+                    foreach (i; 0 .. fieldTypes.length)
                     {
-                        s ~= "msg.read(fieldLen);";
-                        s ~= "if (fieldLen == -1)";
-                        s ~= text("row.setNull!(", to!string(i), ")();");
+                        s ~= "msg.read(fieldLen);\n";
+                        s ~= "if (fieldLen == -1)\n";
+                        s ~= text("row.setNull!(", i, ")();\n");
                         s ~= "else\n";
                         s ~= text("row.set!(fieldTypes[", i, "], ", i, ")(",
                                   "msg.readBaseType!(fieldTypes[", i, "])(fields[", i, "].oid, fieldLen)",
-                                  ");");
+                                  ");\n");
+                        // text() doesn't work with -inline option, CTFE bug
                     }
                     
                     return s;
@@ -1459,6 +1462,7 @@ class PGConnection
             
             sendExecuteMessage(portalName, 0);
             sendSyncMessage();
+            sendFlushMessage();
             
         receive:
             
