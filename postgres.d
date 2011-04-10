@@ -14,6 +14,7 @@ $(UL
 
 TODOs:
 $(UL
+    $(LI Redesign parametrized queries)
     $(LI BigInt/Numeric types support)
     $(LI Geometric types support)
     $(LI Network types support)
@@ -31,6 +32,34 @@ $(UL
     $(LI Support only cleartext and MD5 $(LINK2 http://www.postgresql.org/docs/9.0/static/auth-methods.html, authentication))
     $(LI Unfinished parameter handling)
     $(LI interval is converted to Duration, which does not support months)
+)
+
+$(B Data type mapping:)
+
+$(TABLE
+    $(TR $(TH PostgreSQL type) $(TH Aliases) $(TH Default D type) $(TH D type mapping possibilities))
+    $(TR $(TD smallint) $(TD int2) $(TD short) <td rowspan="19">Any type convertible from default D type</td>)
+    $(TR $(TD integer) $(TD int4) $(TD int))
+    $(TR $(TD bigint) $(TD int8) $(TD long))
+    $(TR $(TD oid) $(TD reg***) $(TD uint))
+    $(TR $(TD decimal) $(TD numeric) $(TD not yet supported))
+    $(TR $(TD real) $(TD float4) $(TD float))
+    $(TR $(TD double precision) $(TD float8) $(TD double))
+    $(TR $(TD character varying(n)) $(TD varchar(n)) $(TD string))
+    $(TR $(TD character(n)) $(TD char(n)) $(TD string))
+    $(TR $(TD text) $(TD) $(TD string))
+    $(TR $(TD "char") $(TD) $(TD char))
+    $(TR $(TD bytea) $(TD) $(TD ubyte[]))
+    $(TR $(TD timestamp without time zone) $(TD timestamp) $(TD DateTime))
+    $(TR $(TD timestamp with time zone) $(TD timestamptz) $(TD SysTime))
+    $(TR $(TD date) $(TD) $(TD Date))
+    $(TR $(TD time without time zone) $(TD time) $(TD TimeOfDay))
+    $(TR $(TD time with time zone) $(TD timetz) $(TD SysTime))
+    $(TR $(TD interval) $(TD) $(TD Duration (without months and years)))
+    $(TR $(TD boolean) $(TD bool) $(TD bool))
+    $(TR $(TD enums) $(TD) $(TD string) $(TD enum))
+    $(TR $(TD arrays) $(TD) $(TD Variant[]) $(TD dynamic/static array with compatible element type))
+    $(TR $(TD composites) $(TD record, row) $(TD Variant[]) $(TD dynamic/static array, struct or Tuple))
 )
 
 Examples:
