@@ -27,7 +27,8 @@ PostgreSQL client implementation.
 
 <br><br>
 <b>TODOs:</b><br>
-<ul>   <li>BigInt/Numeric types support</li>
+<ul>   <li>Redesign parametrized queries</li>
+    <li>BigInt/Numeric types support</li>
     <li>Geometric types support</li>
     <li>Network types support</li>
     <li>Bit string types support</li>
@@ -45,6 +46,35 @@ PostgreSQL client implementation.
     <li>Unfinished parameter handling</li>
     <li>interval is converted to Duration, which does not support months</li>
 </ul>
+<br><br>
+
+<b>Data type mapping:</b>
+<br><br>
+
+<table>   <tr><th>PostgreSQL type</th> <th>Aliases</th> <th>Default D type</th> <th>D type mapping possibilities</th></tr>
+    <tr><td>smallint</td> <td>int2</td> <td>short</td> <td rowspan="19">Any type convertible from default D type</td></tr>
+    <tr><td>integer</td> <td>int4</td> <td>int</td></tr>
+    <tr><td>bigint</td> <td>int8</td> <td>long</td></tr>
+    <tr><td>oid</td> <td>reg***</td> <td>uint</td></tr>
+    <tr><td>decimal</td> <td>numeric</td> <td>not yet supported</td></tr>
+    <tr><td>real</td> <td>float4</td> <td>float</td></tr>
+    <tr><td>double precision</td> <td>float8</td> <td>double</td></tr>
+    <tr><td>character varying(n)</td> <td>varchar(n)</td> <td>string</td></tr>
+    <tr><td>character(n)</td> <td>char(n)</td> <td>string</td></tr>
+    <tr><td>text</td> <td></td> <td>string</td></tr>
+    <tr><td>"char"</td> <td></td> <td>char</td></tr>
+    <tr><td>bytea</td> <td></td> <td>ubyte[]</td></tr>
+    <tr><td>timestamp without time zone</td> <td>timestamp</td> <td>DateTime</td></tr>
+    <tr><td>timestamp with time zone</td> <td>timestamptz</td> <td>SysTime</td></tr>
+    <tr><td>date</td> <td></td> <td>Date</td></tr>
+    <tr><td>time without time zone</td> <td>time</td> <td>TimeOfDay</td></tr>
+    <tr><td>time with time zone</td> <td>timetz</td> <td>SysTime</td></tr>
+    <tr><td>interval</td> <td></td> <td>Duration (without months and years)</td></tr>
+    <tr><td>boolean</td> <td>bool</td> <td>bool</td></tr>
+    <tr><td>enums</td> <td></td> <td>string</td> <td>enum</td></tr>
+    <tr><td>arrays</td> <td></td> <td>Variant[]</td> <td>dynamic/static array with compatible element type</td></tr>
+    <tr><td>composites</td> <td>record, row</td> <td>Variant[]</td> <td>dynamic/static array, struct or Tuple</td></tr>
+</table>
 
 <br><br>
 <b>Examples:</b><br>
@@ -903,7 +933,7 @@ Exception if result contains more than one row when throwIfMoreRows is <b>true</
 		<tr><td id="docfooter">
 			Page was generated with
 			<img src="candydoc/img/candydoc.gif" style="vertical-align:middle; position:relative; top:-1px">
-			on Fri Apr  8 01:34:11 2011
+			on Sun Apr 10 02:02:23 2011
 
 		</td></tr>
 	</table>
