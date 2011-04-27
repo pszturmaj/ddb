@@ -994,7 +994,7 @@ class PGConnection
             
             ubyte[] msg = new ubyte[len];
 
-            stream.read(msg);
+            stream.readExact(msg.ptr, len);
             
             return Message(this, type, msg);
         }
