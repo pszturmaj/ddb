@@ -625,73 +625,55 @@ struct Message
         switch (oid)
         {
             case 16: // bool
-            {
                 static if (isConvertible!(T, bool))
                     return _to!T(read!bool);
                 else
                     convError!T;
-            }
             case 26, 24, 2202, 2203, 2204, 2205, 2206, 3734, 3769: // oid and reg*** aliases
-            {
                 static if (isConvertible!(T, uint))
                     return _to!T(read!uint);
                 else
                     convError!T;
-            }
             case 21: // int2
-            {
                 static if (isConvertible!(T, short))
                     return _to!T(read!short);
                 else
                     convError!T;
-            }
             case 23: // int4
-            {
                 static if (isConvertible!(T, int))
                     return _to!T(read!int);
                 else
                     convError!T;
-            }
             case 20: // int8
-            {
                 static if (isConvertible!(T, long))
                     return _to!T(read!long);
                 else
                     convError!T;
-            }
             case 700: // float4
-            {
                 static if (isConvertible!(T, float))
                     return _to!T(read!float);
                 else
                     convError!T;
-            }
             case 701: // float8
-            {
                 static if (isConvertible!(T, double))
                     return _to!T(read!double);
                 else
                     convError!T;
-            }
             case 1042, 1043, 25, 19, 705: // bpchar, varchar, text, name, unknown
-            {
                 static if (isConvertible!(T, string))
                     return _to!T(readString(len));
                 else
                     convError!T;
-            }
             case 17: // bytea
                 static if (isConvertible!(T, ubyte[]))
                     return _to!T(read!(ubyte[])(len));
                 else
                     convError!T;
             case 18: // "char"
-            {
                 static if (isConvertible!(T, char))
                     return _to!T(read!char);
                 else
                     convError!T;
-            }
             case 1082: // date
                 static if (isConvertible!(T, Date))
                     return _to!T(read!Date);
@@ -723,23 +705,18 @@ struct Message
                 else
                     convError!T;
             case 2249: // record and other composite types
-            {
                 static if (isVariantN!T && T.allowed!(Variant[]))
                     return T(readComposite!(Variant[]));
                 else
                     return readComposite!T;
-            }
             case 2287: // _record and other arrays
-            {
                 static if (isArray!T && !isSomeString!T)
                     return readArray!T;
                 else static if (isVariantN!T && T.allowed!(Variant[]))
                     return T(readArray!(Variant[]));
                 else
                     convError!T;
-            }
             default:
-            {
                 if (oid in conn.arrayTypes)
                     goto case 2287;
                 else if (oid in conn.compositeTypes)
@@ -753,7 +730,6 @@ struct Message
                     else
                         convError!T;
                 }
-            }
         }
         
         convError!T;
@@ -1135,23 +1111,17 @@ class PGConnection
                 switch (param.type)
                 {
                     case PGType.INT2:
-                    {
                         stream.write(2);
                         stream.write(param.value.coerce!short);
                         break;
-                    }
                     case PGType.INT4:
-                    {
                         stream.write(4);
                         stream.write(param.value.coerce!int);
                         break;
-                    }
                     case PGType.INT8:
-                    {
                         stream.write(8);
                         stream.write(param.value.coerce!long);
                         break;
-                    }
                 }
             }
             
@@ -1224,21 +1194,15 @@ class PGConnection
             switch (msg.type)
             {
                 case 'E':
-                {
                     // ErrorResponse
                     ResponseMessage response = handleResponseMessage(msg);
                     throw new ServerErrorException(response);
-                }
                 case '1':
-                {
                     // ParseComplete
                     return;
-                }
                 default:
-                {
                     // async notice, notification
                     goto receive;
-                }
             }
         }
 
@@ -1255,21 +1219,15 @@ class PGConnection
             switch (msg.type)
             {
                 case 'E':
-                {
                     // ErrorResponse
                     ResponseMessage response = handleResponseMessage(msg);
                     throw new ServerErrorException(response);
-                }
                 case '3':
-                {
                     // CloseComplete
                     return;
-                }
                 default:
-                {
                     // async notice, notification
                     goto receive;
-                }
             }
         }
         
@@ -1288,23 +1246,16 @@ class PGConnection
             switch (msg.type)
             {
                 case 'E':
-                {
                     // ErrorResponse
                     ResponseMessage response = handleResponseMessage(msg);
                     throw new ServerErrorException(response);
-                }
                 case '3':
-                {
                     // CloseComplete
                     goto receive;
-                }
                 case '2':
-                {
                     // BindComplete
                     goto receive;
-                }
                 case 'T':
-                {
                     // RowDescription (response to Describe)
                     PGField[] fields;
                     short fieldCount;
@@ -1331,17 +1282,12 @@ class PGConnection
                     }
                     
                     return cast(PGFields)fields;
-                }
                 case 'n':
-                {
                     // NoData (response to Describe)
                     return new immutable(PGField)[0];
-                }
                 default:
-                {
                     // async notice, notification
                     goto receive;
-                }
             }
         }
         
@@ -1361,19 +1307,14 @@ class PGConnection
             switch (msg.type)
             {
                 case 'E':
-                {
                     // ErrorResponse
                     ResponseMessage response = handleResponseMessage(msg);
                     throw new ServerErrorException(response);
-                }
                 case 'D':
-                {
                     // DataRow
                     finalizeQuery();
                     throw new Exception("This query returned rows.");
-                }
                 case 'C':
-                {
                     // CommandComplete
                     string tag;
                     
@@ -1393,22 +1334,15 @@ class PGConnection
                     }
                     
                     goto receive;
-                }
                 case 'I':
-                {
                     // EmptyQueryResponse
                     goto receive;
-                }
                 case 'Z':
-                {
                     // ReadyForQuery
                     return rowsAffected;
-                }
                 default:
-                {
                     // async notice, notification
                     goto receive;
-                }
             }
         }
         
@@ -1500,7 +1434,6 @@ class PGConnection
             switch (msg.type)
             {
                 case 'D':
-                {
                     // DataRow
                     alias DBRow!Specs Row;
                         
@@ -1513,9 +1446,7 @@ class PGConnection
                     activeResultSet = true;
                     
                     return result;
-                }
                 case 'C':
-                {
                     // CommandComplete
                     string tag;
                     
@@ -1528,34 +1459,23 @@ class PGConnection
                     }
                 
                     goto receive;
-                }
                 case 'I':
-                {
                     // EmptyQueryResponse
                     throw new Exception("Query string is empty.");
-                }
                 case 's':
-                {
                     // PortalSuspended
                     throw new Exception("Command suspending is not supported.");
-                }
                 case 'Z':
-                {
                     // ReadyForQuery
                     result.nextMsg = msg;
                     return result;
-                }
                 case 'E':
-                {
                     // ErrorResponse
                     ResponseMessage response = handleResponseMessage(msg);
                     throw new ServerErrorException(response);
-                }
                 default:
-                {
                     // async notice, notification
                     goto receive;
-                }
             }
             
             assert(0);
@@ -1618,7 +1538,6 @@ class PGConnection
             switch (msg.type)
             {
                 case 'E', 'N':
-                {
                     // ErrorResponse, NoticeResponse
                     ResponseMessage response = handleResponseMessage(msg);
                     
@@ -1626,9 +1545,7 @@ class PGConnection
                         goto receive;
                     
                     throw new ServerErrorException(response);
-                }
                 case 'R':
-                {
                     // AuthenticationXXXX
                     enforce(msg.data.length >= 4);
                     
@@ -1639,12 +1556,9 @@ class PGConnection
                     switch (atype)
                     {
                         case 0:
-                        {
                             // authentication successful, now wait for another messages
                             goto receive;
-                        }
                         case 3:
-                        {
                             // clear-text password is required
                             enforce("password" in params, new ParamException("Required parameter 'password' not found"));
                             enforce(msg.data.length == 4);
@@ -1652,9 +1566,7 @@ class PGConnection
                             sendPasswordMessage(params["password"]);
                             
                             goto receive;
-                        }
                         case 5:
-                        {
                             // MD5-hashed password is required, formatted as:
                             // "md5" + md5(md5(password + username) + salt)
                             // where md5() returns lowercase hex-string
@@ -1668,19 +1580,14 @@ class PGConnection
                             sendPasswordMessage(password);
                             
                             goto receive;
-                        }
                         default:
-                        {
                             // non supported authentication type, close connection
                             socket.close();
                             throw new Exception("Unsupported authentication type");
-                        }
                     }
                     
                     break;
-                }
                 case 'S':
-                {
                     // ParameterStatus
                     enforce(msg.data.length >= 2);
                     
@@ -1694,9 +1601,7 @@ class PGConnection
                     goto receive;
                     
                     break;
-                }
                 case 'K':
-                {
                     // BackendKeyData
                     enforce(msg.data.length == 8);
                         
@@ -1706,9 +1611,7 @@ class PGConnection
                     goto receive;
                     
                     break;
-                }
                 case 'Z':
-                {
                     // ReadyForQuery
                     enforce(msg.data.length == 1);
                     
@@ -1724,12 +1627,9 @@ class PGConnection
                     // connection is opened and now it's possible to send queries
                     reloadAllTypes();
                     return;
-                }
                 default:
-                {
                     // unknown message type, ignore it
                     goto receive;
-                }
             }
         }
 
