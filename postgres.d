@@ -1064,6 +1064,12 @@ class PGConnection
             stream.writeCString(name);
         }
         
+        void sendTerminateMessage()
+        {
+            stream.write('X');
+            stream.write(4);
+        }
+
         void sendBindMessage(string portalName, string statementName, PGParameters params)
         {
             int paramsLen = 0;
@@ -1582,7 +1588,7 @@ class PGConnection
                             goto receive;
                         default:
                             // non supported authentication type, close connection
-                            socket.close();
+                            close();
                             throw new Exception("Unsupported authentication type");
                     }
                     
@@ -1636,6 +1642,7 @@ class PGConnection
         /// Closes current connection to the server.
         void close()
         {
+            sendTerminateMessage();
             socket.close();
         }
         
