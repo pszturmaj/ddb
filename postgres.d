@@ -170,10 +170,10 @@ int hton(const int i)
     }
 }
 
-enum PGEpochDate = Date(2000, 1, 1);
-enum PGEpochDay = PGEpochDate.dayOfGregorianCal;
-enum PGEpochTime = TimeOfDay(0, 0, 0);
-enum PGEpochDateTime = DateTime(2000, 1, 1, 0, 0, 0);
+const PGEpochDate = Date(2000, 1, 1);
+const PGEpochDay = PGEpochDate.dayOfGregorianCal;
+const PGEpochTime = TimeOfDay(0, 0, 0);
+const PGEpochDateTime = DateTime(2000, 1, 1, 0, 0, 0);
 
 class PGStream : SocketStream
 {
