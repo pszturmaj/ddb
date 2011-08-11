@@ -1129,6 +1129,8 @@ class PGConnection
                         stream.write(8);
                         stream.write(param.value.coerce!long);
                         break;
+                    default:
+						assert("Not implemented");
                 }
             }
             
