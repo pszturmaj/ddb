@@ -1044,7 +1044,7 @@ class PGConnection
         
         void sendParseMessage(string statementName, string query, uint[] oids)
         {
-            int len = 4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4;
+            ulong len = 4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4;
 
             stream.write('P');
             stream.write(len);
@@ -1092,10 +1092,11 @@ class PGConnection
                     case PGType.INT2: checkParam!short(2); break;
                     case PGType.INT4: checkParam!int(4); break;
                     case PGType.INT8: checkParam!long(8); break;
+                    default: assert("Not implemented");
                 }
             }
             
-            int len = 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
+            ulong len = 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
                 params.length * 4 + paramsLen + 2 + 2;
             
             stream.write('B');
