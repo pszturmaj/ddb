@@ -696,7 +696,7 @@ struct Message
                     convError!T;
             case 1186: // interval
                 static if (isConvertible!(T, core.time.Duration))
-                    return _to!T(read!core.time.Duration);
+                    return _to!T(read!(core.time.Duration));
                 else
                     convError!T;
             case 1266: // timetz
