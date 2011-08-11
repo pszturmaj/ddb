@@ -6,7 +6,7 @@ License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Piotr Szturmaj
 */
 
-module db;
+//module db;
 
 import std.conv, std.traits, std.typecons, std.typetuple, std.variant;
 

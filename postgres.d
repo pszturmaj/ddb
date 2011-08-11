@@ -137,7 +137,7 @@ import std.intrinsic;
 import std.variant;
 import std.algorithm;
 import std.datetime;
-public import db;
+public import ddb.db;
 
 private:
 
