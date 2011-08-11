@@ -271,7 +271,7 @@ class PGStream : SocketStream
     }
     
     // BUG: Does not support months
-    void write(const ref Duration x) // interval
+    void write(const ref core.time.Duration x) // interval
     {
         int months = 0;
         int days = cast(int)x.days;
@@ -437,7 +437,7 @@ struct Message
     }
     
     // BUG: Does not support months
-    void read()(out Duration x) // interval
+    void read()(out core.time.Duration x) // interval
     {
         long usecs = read!long;
         int days = read!int;
@@ -695,8 +695,8 @@ struct Message
                 else
                     convError!T;
             case 1186: // interval
-                static if (isConvertible!(T, Duration))
-                    return _to!T(read!Duration);
+                static if (isConvertible!(T, core.time.Duration))
+                    return _to!T(read!core.time.Duration);
                 else
                     convError!T;
             case 1266: // timetz
