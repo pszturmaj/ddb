@@ -137,7 +137,7 @@ import std.intrinsic;
 import std.variant;
 import std.algorithm;
 import std.datetime;
-public import db;
+public import ddb.db;
 
 private:
 
@@ -271,7 +271,7 @@ class PGStream : SocketStream
     }
     
     // BUG: Does not support months
-    void write(const ref Duration x) // interval
+    void write(const ref core.time.Duration x) // interval
     {
         int months = 0;
         int days = cast(int)x.days;
@@ -437,7 +437,7 @@ struct Message
     }
     
     // BUG: Does not support months
-    void read()(out Duration x) // interval
+    void read()(out core.time.Duration x) // interval
     {
         long usecs = read!long;
         int days = read!int;
@@ -695,8 +695,8 @@ struct Message
                 else
                     convError!T;
             case 1186: // interval
-                static if (isConvertible!(T, Duration))
-                    return _to!T(read!Duration);
+                static if (isConvertible!(T, core.time.Duration))
+                    return _to!T(read!(core.time.Duration));
                 else
                     convError!T;
             case 1266: // timetz
@@ -1044,7 +1044,7 @@ class PGConnection
         
         void sendParseMessage(string statementName, string query, uint[] oids)
         {
-            int len = 4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4;
+            ulong len = 4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4;
 
             stream.write('P');
             stream.write(len);
@@ -1092,10 +1092,11 @@ class PGConnection
                     case PGType.INT2: checkParam!short(2); break;
                     case PGType.INT4: checkParam!int(4); break;
                     case PGType.INT8: checkParam!long(8); break;
+                    default: assert("Not implemented");
                 }
             }
             
-            int len = 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
+            ulong len = 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
                 params.length * 4 + paramsLen + 2 + 2;
             
             stream.write('B');
@@ -1128,6 +1129,8 @@ class PGConnection
                         stream.write(8);
                         stream.write(param.value.coerce!long);
                         break;
+                    default:
+						assert("Not implemented");
                 }
             }
             
