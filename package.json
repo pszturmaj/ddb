@@ -9,6 +9,5 @@
 	"dependencies": {
 		"vibe-d": {"version":"~master"}
 	},
-	"sourcePaths": ["../ddb/"],
 	"versions": ["Have_vibe_d"]
 }
