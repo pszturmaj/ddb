@@ -1,0 +1,14 @@
+{
+	"name": "ddb",
+	"description": "Asynchronous Postgresql Binding",
+	"license": "Boost License 1.0",
+	"copyright": "Copyright © 2013 Piotr Szturmaj",
+	"homepage": "https://github.com/pszturmaj/",
+	"authors": ["Piotr Szturmaj"],
+	"targetType": "sourceLibrary",
+	"dependencies": {
+		"vibe-d": {"version":"~master"}
+	},
+	"sourcePaths": ["../ddb/"],
+	"versions": ["Have_vibe_d"]
+}

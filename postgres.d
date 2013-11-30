@@ -126,129 +126,98 @@ OR MODIFICATIONS.
 
 module postgres;
 
-import std.socket, std.socketstream;
+version (Have_vibe_d) {
+	import vibe.core.net;
+	import vibe.core.stream;
+} else {
+	import std.socket;
+	import std.socketstream;
+}
+import std.bitmanip;
 import std.exception;
 import std.conv;
 import std.traits;
 import std.typecons;
 import std.string;
-import std.md5;
-import std.intrinsic;
+import std.digest.md;
+import core.bitop;
 import std.variant;
 import std.algorithm;
+import std.stdio;
 import std.datetime;
-public import ddb.db;
+public import db;
 
 private:
-
-short hton(short i)
-{
-    version (BigEndian)
-    {
-        return i;
-    }
-    else
-    {
-        ubyte* b = cast(ubyte*)&i;
-        ubyte l = *b;
-        *b = *(b + 1);
-        *(b + 1) = l;
-        
-        return i;
-    }
-}
-
-int hton(const int i)
-{
-    version (BigEndian)
-    {
-        return i;
-    }
-    else
-    {
-        return cast(int)bswap(cast(uint)i);
-    }
-}
 
 const PGEpochDate = Date(2000, 1, 1);
 const PGEpochDay = PGEpochDate.dayOfGregorianCal;
 const PGEpochTime = TimeOfDay(0, 0, 0);
 const PGEpochDateTime = DateTime(2000, 1, 1, 0, 0, 0);
 
-class PGStream : SocketStream
+class PGStream
 {
-    this(Socket socket)
+	private {
+		version (Have_vibe_d) TCPConnection m_socket;
+		else SocketStream m_socket;
+	}
+	version (Have_vibe_d){
+		@property TCPConnection socket() { return m_socket; }
+		this(TCPConnection socket)
+	    {
+			m_socket = socket;
+	    }
+	}else{
+		@property SocksetStream socket() { return m_socket; }
+		this(SocketStream socket){
+			m_socket = socket;
+		}
+	}
+
+
+	/*
+	 * I'm not too sure about this function
+	 * Should I keep the length?
+	 */	
+	void write(ubyte[] x)
+	{
+		m_socket.write(x);
+	}
+	
+	void write(ubyte x)
+	{
+		write(nativeToBigEndian(x)); // ubyte[]
+	}
+    
+    void write(short x)
+	{
+		write(nativeToBigEndian(x)); // ubyte[]
+	}
+    
+    void write(int x)
+	{
+		write(nativeToBigEndian(x)); // ubyte[]
+	}
+	
+    void write(long x)
     {
-        super(socket);
+		write(nativeToBigEndian(x));
+	}
+    
+    void write(float x)
+    {
+		write(nativeToBigEndian(x)); // ubyte[]
     }
     
-    override void write(ubyte x)
+    void write(double x)
     {
-        super.write(x);
-    }
-    
-    override void write(short x)
-    {
-        super.write(hton(x));
-    }
-    
-    override void write(int x)
-    {
-        super.write(hton(x));
-    }
-    
-    override void write(long x)
-    {
-        uint u;
-    
-        u = hton(cast(uint)(x >> 32));
-        super.write(u);
-    
-        u = hton(cast(uint)x);
-        super.write(u);
-    }
-    
-    override void write(float x)
-    {
-        union U
-        {
-            float f;
-            int i;
-        }
-        
-        U u;
-        u.f = x;
-        
-        super.write(hton(u.i));
-    }
-    
-    override void write(double x)
-    {
-        union U
-        {
-            double d;
-            long l;
-        }
-        
-        U u;
-        u.d = x;
-        
-        write(u.l);
-    }
+		write(nativeToBigEndian(x));
+	}
     
     void writeCString(string x)
     {
-        super.writeString(x);
-        super.write('\0');
-    }
-    
-    void write(ubyte[] x)
-    {
-        static if (x.length.sizeof > int.sizeof)
-            enforce(x.length <= int.max);
-        write(cast(int)x.length);
-        super.write(x);
-    }
+		ubyte[] ub = cast(ubyte[])(x ~ "\0");
+		write(ub);
+	}
 
     void write(const ref Date x)
     {
@@ -256,43 +225,43 @@ class PGStream : SocketStream
     }
 
     void write(const ref TimeOfDay x)
-    {
-        write(cast(int)((x - PGEpochTime).total!"usecs"));
+	{
+		write(cast(int)((x - PGEpochTime).total!"usecs"));
     }
 
     void write(const ref DateTime x) // timestamp
-    {
-        write(cast(int)((x - PGEpochDateTime).total!"usecs"));
+	{
+		write(cast(int)((x - PGEpochDateTime).total!"usecs"));
     }
     
     void write(const ref SysTime x) // timestamptz
-    {
-        write(cast(int)((x - SysTime(PGEpochDateTime, UTC())).total!"usecs"));
+	{
+		write(cast(int)((x - SysTime(PGEpochDateTime, UTC())).total!"usecs"));
     }
     
     // BUG: Does not support months
     void write(const ref core.time.Duration x) // interval
-    {
-        int months = 0;
-        int days = cast(int)x.days;
+	{
+		int months = cast(int)(x.weeks/4);
+		int days = cast(int)x.days;
         long usecs = x.total!"usecs" - convert!("days", "usecs")(days);
         
         write(usecs);
         write(days);
-        write(months);
-    }
+		write(months);
+	}
     
     void writeTimeTz(const ref SysTime x) // timetz
-    {
-        TimeOfDay t = cast(TimeOfDay)x;
+	{
+		TimeOfDay t = cast(TimeOfDay)x;
         write(t);
-        write(cast(int)0);
-    }
+		write(cast(int)0);
+	}
 }
 
 string MD5toHex(in void[][] data...)
 {
-    return tolower(getDigestString(data));
+    return md5Of(data).toHexString;
 }
 
 struct Message
@@ -302,8 +271,7 @@ struct Message
     ubyte[] data;
     
     private size_t position = 0;
-    private alias hton ntoh;
-    
+
     T read(T, Params...)(Params p)
     {
         T value;
@@ -318,48 +286,32 @@ struct Message
     
     void read()(out short x)
     {
-        x = ntoh(*(cast(short*)(data.ptr + position)));
+		x = bigEndianToNative!short(cast(ubyte[short.sizeof])data[position..position+short.sizeof]);
         position += 2;
     }
 
     void read()(out int x)
     {
-        x = ntoh(*(cast(int*)(data.ptr + position)));
+		x = bigEndianToNative!int(cast(ubyte[int.sizeof])data[position..position+int.sizeof]);
         position += 4;
     }
     
     void read()(out long x)
     {
-        uint h = ntoh(*(cast(uint*)(data.ptr + position)));
-        uint l = ntoh(*(cast(uint*)(data.ptr + position + 4)));
-        x = (cast(long)h << 32) | l;
-        position += 8;
-    }
-    
-    void read()(out float x)
+		x = bigEndianToNative!long(cast(ubyte[8])data[position..position+long.sizeof]);
+		position += 8;
+	}
+	
+	void read()(out float x)
     {
-        union U
-        {
-            float f;
-            int i;
-        }
-        
-        U u;
-        read(u.i);
-        x = u.f;
+		x = bigEndianToNative!float(cast(ubyte[float.sizeof])data[position..position+float.sizeof]);
+		position += float.sizeof;
     }
     
     void read()(out double x)
     {
-        union U
-        {
-            double d;
-            long l;
-        }
-        
-        U u;
-        read(u.l);
-        x = u.d;
+		x = bigEndianToNative!double(cast(ubyte[double.sizeof])data[position..position+double.sizeof]);
+		position += double.sizeof;
     }
     
     string readCString()
@@ -375,8 +327,7 @@ struct Message
         
         while (*p > 0)
             p++;
-        
-        x = cast(string)data[position .. cast(size_t)(p - data.ptr)];
+		x = cast(string)data[position .. cast(size_t)(p - data.ptr)];
         position = cast(size_t)(p - data.ptr + 1);
     }
     
@@ -388,16 +339,16 @@ struct Message
     }
     
     void readString(out string x, int len)
-    {
-        x = cast(string)data[position .. position + len];
-        position += len;
-    }
+	{
+		x = cast(string)(data[position .. position + len]);
+		position += len;
+	}
     
     void read()(out uint x)
-    {
-        x = ntoh(*(cast(uint*)(data.ptr + position)));
-        position += 4;
-    }
+	{
+		x = bigEndianToNative!uint( cast(ubyte[4]) data[position .. position + uint.sizeof] );
+		position += 4;
+	}
     
     void read()(out bool x)
     {
@@ -405,17 +356,17 @@ struct Message
     }
     
     void read()(out ubyte[] x, int len)
-    {
-        enforce(position + len <= data.length);
+	{
+		enforce(position + len <= data.length);
         x = data[position .. position + len];
-        position += len;
-    }
+		position += len;
+	}
     
     void read()(out Date x) // date
-    {
-        int days = read!int; // number of days since 1 Jan 2000
-        x = PGEpochDate + dur!"days"(days);
-    }
+	{
+		int days = read!int; // number of days since 1 Jan 2000
+		x = PGEpochDate + dur!"days"(days);
+	}
     
     void read()(out TimeOfDay x) // time
     {
@@ -450,8 +401,8 @@ struct Message
     {
         TimeOfDay time = read!TimeOfDay;
         int zone = read!int / 60; // originally in seconds, convert it to minutes
-
-        return SysTime(DateTime(Date(0, 1, 1), time), new SimpleTimeZone(zone));
+		auto stz = new immutable SimpleTimeZone(zone);
+        return SysTime(DateTime(Date(0, 1, 1), time), stz);
     }
     
     T readComposite(T)()
@@ -510,10 +461,14 @@ struct Message
         
         return record.base;
     }
-    
+	mixin template elmnt(U : U[])
+	{
+		alias U ElemType;
+	}    
     private AT readDimension(AT)(int[] lengths, uint elementOid, int dim)
     {
-        alias typeof(AT[0]) ElemType;
+
+        mixin elmnt!AT;
         
         int length = lengths[dim];
         
@@ -667,43 +622,60 @@ struct Message
             case 17: // bytea
                 static if (isConvertible!(T, ubyte[]))
                     return _to!T(read!(ubyte[])(len));
-                else
+                else {
                     convError!T;
-            case 18: // "char"
+					break;
+				}
+			case 18: // "char"
                 static if (isConvertible!(T, char))
                     return _to!T(read!char);
-                else
+                else {
                     convError!T;
+					break;
+				}
             case 1082: // date
                 static if (isConvertible!(T, Date))
                     return _to!T(read!Date);
-                else
+                else {
                     convError!T;
+					break;
+				}
             case 1083: // time
                 static if (isConvertible!(T, TimeOfDay))
                     return _to!T(read!TimeOfDay);
-                else
+                else {
                     convError!T;
+					break;
+				}
             case 1114: // timestamp
                 static if (isConvertible!(T, DateTime))
                     return _to!T(read!DateTime);
-                else
+                else {
                     convError!T;
+					break;
+				}
             case 1184: // timestamptz
                 static if (isConvertible!(T, SysTime))
                     return _to!T(read!SysTime);
-                else
+                else {
                     convError!T;
+					break;
+				}
             case 1186: // interval
                 static if (isConvertible!(T, core.time.Duration))
                     return _to!T(read!(core.time.Duration));
-                else
+                else {
                     convError!T;
-            case 1266: // timetz
+					break;
+				}
+
+			case 1266: // timetz
                 static if (isConvertible!(T, SysTime))
                     return _to!T(readTimeTz);
-                else
+                else {
                     convError!T;
+					break;
+				}
             case 2249: // record and other composite types
                 static if (isVariantN!T && T.allowed!(Variant[]))
                     return T(readComposite!(Variant[]));
@@ -714,8 +686,10 @@ struct Message
                     return readArray!T;
                 else static if (isVariantN!T && T.allowed!(Variant[]))
                     return T(readArray!(Variant[]));
-                else
+                else {
                     convError!T;
+					break;
+				}
             default:
                 if (oid in conn.arrayTypes)
                     goto case 2287;
@@ -754,20 +728,30 @@ template isConvertible(T, S)
         enum isConvertible = false;
 }
 
+template arrayDimensions(T : T[])
+{
+	static if (isArray!T && !isSomeString!T)
+		enum arrayDimensions = arrayDimensions!T + 1;
+	else
+		enum arrayDimensions = 1;
+}
+
 template arrayDimensions(T)
 {
+		enum arrayDimensions = 0;
+}
+
+template multiArrayElemType(T : T[])
+{
     static if (isArray!T && !isSomeString!T)
-        enum arrayDimensions = arrayDimensions!(typeof(T[0])) + 1;
+        alias multiArrayElemType!T multiArrayElemType;
     else
-        enum arrayDimensions = 0;
+        alias T multiArrayElemType;
 }
 
 template multiArrayElemType(T)
 {
-    static if (isArray!T && !isSomeString!T)
-        alias multiArrayElemType!(typeof(T[0])) multiArrayElemType;
-    else
-        alias T multiArrayElemType;
+	alias T multiArrayElemType;
 }
 
 static assert(arrayDimensions!(int) == 0);
@@ -777,7 +761,7 @@ static assert(arrayDimensions!(int[][][]) == 3);
 
 enum TransactionStatus : char { OutsideTransaction = 'I', InsideTransaction = 'T', InsideFailedTransaction = 'E' };
 
-enum string[uint] baseTypes = [
+enum string[int] baseTypes = [
     // boolean types
     16 : "bool",
     // bytea types
@@ -799,7 +783,7 @@ enum string[uint] baseTypes = [
 
 public:
 
-enum PGType : uint
+enum PGType : int
 {
     OID = 26,
     NAME = 19,
@@ -959,7 +943,6 @@ Class representing connection to PostgreSQL server.
 class PGConnection
 {
     private:
-        Socket socket;
         PGStream stream;
         string[string] serverParams;
         int serverProcessID;
@@ -982,19 +965,21 @@ class PGConnection
         
         Message getMessage()
         {
-            alias hton ntoh;
 
             char type;
             int len;
-            
-            stream.read(type); // message type
-            stream.read(len); // message length, doesn't include type byte
-        
-            len = ntoh(len) - 4;
+			ubyte[1] ub;
+			stream.socket.read(ub); // message type
+
+			type = bigEndianToNative!char(ub);
+			ubyte[4] ubi;
+			stream.socket.read(ubi); // message length, doesn't include type byte
+
+			len = bigEndianToNative!int(ubi) - 4;
             
             ubyte[] msg = new ubyte[len];
 
-            stream.readExact(msg.ptr, len);
+            stream.socket.read(msg);
             
             return Message(this, type, msg);
         }
@@ -1022,29 +1007,27 @@ class PGConnection
             
             stream.write(len);
             stream.write(0x0003_0000); // version number 3
-            
             foreach (key, value; params)
             {
                 if (localParam(key))
                     continue;
-
                 stream.writeCString(key);
                 stream.writeCString(value);
             }
-            
-            stream.write(cast(ubyte)0);
-        }
+		stream.write(cast(ubyte)0);
+	}
         
         void sendPasswordMessage(string password)
         {
+
             stream.write('p');
             stream.write(password.length + 5);
             stream.writeCString(password);
         }
         
-        void sendParseMessage(string statementName, string query, uint[] oids)
+        void sendParseMessage(string statementName, string query, int[] oids)
         {
-            ulong len = 4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4;
+            int len = 4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4;
 
             stream.write('P');
             stream.write(len);
@@ -1057,24 +1040,24 @@ class PGConnection
         }
         
         void sendCloseMessage(DescribeType type, string name)
-        {
-            stream.write('C');
-            stream.write(4 + 1 + name.length + 1);
+		{
+			stream.write('C');
+            stream.write(cast(int)(4 + 1 + name.length + 1));
             stream.write(cast(char)type);
             stream.writeCString(name);
         }
         
         void sendTerminateMessage()
-        {
-            stream.write('X');
-            stream.write(4);
+		{
+			stream.write('X');
+            stream.write(cast(int)4);
         }
 
         void sendBindMessage(string portalName, string statementName, PGParameters params)
         {
             int paramsLen = 0;
-            
-            foreach (param; params)
+
+			foreach (param; params)
             {
                 enforce(param.value.hasValue, new ParamException("Parameter $" ~ to!string(param.index) ~ " value is not initialized"));
 
@@ -1096,7 +1079,7 @@ class PGConnection
                 }
             }
             
-            ulong len = 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
+            int len = 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
                 params.length * 4 + paramsLen + 2 + 2;
             
             stream.write('B');
@@ -1105,7 +1088,7 @@ class PGConnection
             stream.writeCString(statementName);
             stream.write(cast(short)1); // one parameter format code
             stream.write(cast(short)1); // binary format
-            stream.write(params.length);
+            stream.write(cast(short)params.length);
             
             foreach (param; params)
             {
@@ -1118,15 +1101,15 @@ class PGConnection
                 switch (param.type)
                 {
                     case PGType.INT2:
-                        stream.write(2);
+                        stream.write(cast(int)2);
                         stream.write(param.value.coerce!short);
                         break;
                     case PGType.INT4:
-                        stream.write(4);
+                        stream.write(cast(int)4);
                         stream.write(param.value.coerce!int);
                         break;
                     case PGType.INT8:
-                        stream.write(8);
+                        stream.write(cast(int)8);
                         stream.write(param.value.coerce!long);
                         break;
                     default:
@@ -1141,38 +1124,38 @@ class PGConnection
         enum DescribeType : char { Statement = 'S', Portal = 'P' }
         
         void sendDescribeMessage(DescribeType type, string name)
-        {
-            stream.write('D');
-            stream.write(4 + 1 + name.length + 1);
+		{
+			stream.write('D');
+            stream.write(cast(int)(4 + 1 + name.length + 1));
             stream.write(cast(char)type);
             stream.writeCString(name);
         }
         
         void sendExecuteMessage(string portalName, int maxRows)
-        {
-            stream.write('E');
-            stream.write(4 + portalName.length + 1 + 4);
+		{
+			stream.write('E');
+            stream.write(cast(int)(4 + portalName.length + 1 + 4));
             stream.writeCString(portalName);
-            stream.write(maxRows);
+            stream.write(cast(int)maxRows);
         }
         
         void sendFlushMessage()
-        {
-            stream.write('H');
-            stream.write(4);
+		{
+			stream.write('H');
+            stream.write(cast(int)4);
         }
 
         void sendSyncMessage()
-        {
-            stream.write('S');
-            stream.write(4);
+		{
+			stream.write('S');
+            stream.write(cast(int)4);
         }
         
         ResponseMessage handleResponseMessage(Message msg)
         {
             enforce(msg.data.length >= 2);
-            
-            char ftype;
+
+			char ftype;
             string fvalue;
             ResponseMessage response = new ResponseMessage;
             
@@ -1194,13 +1177,14 @@ class PGConnection
         {
             checkActiveResultSet();
             sendParseMessage(statementName, query, params.getOids());
+
             sendFlushMessage();
-            
-        receive:
+
+	receive:
             
             Message msg = getMessage();
-            
-            switch (msg.type)
+
+		switch (msg.type)
             {
                 case 'E':
                     // ErrorResponse
@@ -1336,13 +1320,14 @@ class PGConnection
                         if (s1 >= 0)
                         {
                             // INSERT oid rows
-                            oid = parse!uint(tag[s1 + 1 .. s2]);
+                            oid = to!uint(tag[s1 + 1 .. s2]);
                         }
                         
-                        rowsAffected = parse!ulong(tag[s2 + 1 .. $]);
+                        rowsAffected = to!ulong(tag[s2 + 1 .. $]);
                     }
                     
                     goto receive;
+
                 case 'I':
                     // EmptyQueryResponse
                     goto receive;
@@ -1464,7 +1449,7 @@ class PGConnection
                     auto s2 = lastIndexOf(tag, ' ');
                     if (s2 >= 0)
                     {
-                        rowsAffected = parse!ulong(tag[s2 + 1 .. $]);
+                        rowsAffected = to!ulong(tag[s2 + 1 .. $]);
                     }
                 
                     goto receive;
@@ -1494,8 +1479,8 @@ class PGConnection
         
         this()
         {
-            socket = new TcpSocket;
-            stream = new PGStream(socket);
+			// socket is created in open()
+
         }
 
         /**
@@ -1537,20 +1522,28 @@ class PGConnection
             
             ushort port = "port" in params? parse!ushort(p["port"]) : 5432;
             
-            socket.connect(new InternetAddress(params["host"], port));
+			 version(Have_vibe_d){
+				stream = new PGStream(connectTCP(params["host"], port));
+			} else {
+				stream = new PGStream(new TcpSocket);
+				stream.socket.connect(new InternetAddress(params["host"], port));
+			}
+
             sendStartupMessage(params);
             
         receive:
             
-            Message msg = getMessage();
-            
+		Message msg = getMessage();import std.stdio;
+
+
             switch (msg.type)
             {
                 case 'E', 'N':
                     // ErrorResponse, NoticeResponse
+
                     ResponseMessage response = handleResponseMessage(msg);
-                    
-                    if (msg.type == 'N')
+					
+				    if (msg.type == 'N')
                         goto receive;
                     
                     throw new ServerErrorException(response);
@@ -1591,11 +1584,10 @@ class PGConnection
                             goto receive;
                         default:
                             // non supported authentication type, close connection
-                            close();
+                            this.close();
                             throw new Exception("Unsupported authentication type");
                     }
                     
-                    break;
                 case 'S':
                     // ParameterStatus
                     enforce(msg.data.length >= 2);
@@ -1609,7 +1601,6 @@ class PGConnection
                     
                     goto receive;
                     
-                    break;
                 case 'K':
                     // BackendKeyData
                     enforce(msg.data.length == 8);
@@ -1619,7 +1610,6 @@ class PGConnection
                     
                     goto receive;
                     
-                    break;
                 case 'Z':
                     // ReadyForQuery
                     enforce(msg.data.length == 1);
@@ -1646,7 +1636,7 @@ class PGConnection
         void close()
         {
             sendTerminateMessage();
-            socket.close();
+            stream.socket.close();
         }
         
         /// Shorthand methods using temporary PGCommand. Semantics is the same as PGCommand's.
@@ -1795,12 +1785,12 @@ class PGParameters
     private PGCommand cmd;
     private bool changed;
     
-    private uint[] getOids()
+    private int[] getOids()
     {
         short[] keys = params.keys;
         sort(keys);
         
-        uint[] oids = new uint[params.length];
+        int[] oids = new int[params.length];
         
         foreach (int i, key; keys)
         {
