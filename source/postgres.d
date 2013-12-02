@@ -1027,7 +1027,7 @@ class PGConnection
         
         void sendParseMessage(string statementName, string query, int[] oids)
         {
-            int len = 4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4;
+            int len = cast(int)(4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4);
 
             stream.write('P');
             stream.write(len);
@@ -1079,8 +1079,8 @@ class PGConnection
                 }
             }
             
-            int len = 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
-                params.length * 4 + paramsLen + 2 + 2;
+            int len = cast(int)( 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
+                params.length * 4 + paramsLen + 2 + 2 );
             
             stream.write('B');
             stream.write(len);
