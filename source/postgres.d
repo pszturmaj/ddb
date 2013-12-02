@@ -1,3 +1,5 @@
+module postgres.db;
+
 /**
 PostgreSQL client implementation.
 
@@ -63,14 +65,41 @@ $(TABLE
 )
 
 Examples:
+with vibe.d use -version=Have_vibe_d and use a ConnectionPool (PostgresDB Object & lockConnection)
 ---
+
+	auto pdb = new PostgresDB([
+		"host" : "192.168.2.50",
+		"database" : "postgres",
+		"user" : "postgres",
+		"password" : ""
+	]);
+	auto conn = pdb.lockConnection();
+
+	auto cmd = new PGCommand(conn, "SELECT typname, typlen FROM pg_type");
+	auto result = cmd.executeQuery;
+	
+	try
+	{
+		foreach (row; result)
+		{
+			writeln(row["typname"], ", ", row[1]);
+		}
+	}
+	finally
+	{
+		result.close;
+	}
+
+---
+without vibe.d you can use std sockets with PGConnection object
+
 import std.stdio;
-import postgres;
+import postgres.db;
 
 int main(string[] argv)
 {
-    auto conn = new PGConnection;
-    conn.open([
+    auto conn = new PGConnection([
         "host" : "localhost",
         "database" : "test",
         "user" : "postgres",
@@ -124,7 +153,7 @@ CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEM
 OR MODIFICATIONS.
 */
 
-module postgres;
+
 
 version (Have_vibe_d) {
 	import vibe.core.net;
@@ -145,7 +174,7 @@ import std.variant;
 import std.algorithm;
 import std.stdio;
 import std.datetime;
-public import db;
+public import postgres.ops;
 
 private:
 
@@ -1477,11 +1506,6 @@ class PGConnection
         
     public:
         
-        this()
-        {
-			// socket is created in open()
-
-        }
 
         /**
         Opens connection to server.
@@ -1504,8 +1528,7 @@ class PGConnection
         
         Examples:
         ---
-        auto conn = new PGConnection;
-        conn.open([
+        auto conn = new PGConnection([
             "host" : "localhost",
             "database" : "test",
             "user" : "postgres",
@@ -1513,7 +1536,7 @@ class PGConnection
         ]);
         ---
         */
-        void open(const string[string] params)
+        this(const string[string] params)
         {
             enforce("host" in params, new ParamException("Required parameter 'host' not found"));
             enforce("user" in params, new ParamException("Required parameter 'user' not found"));
@@ -2189,3 +2212,39 @@ class PGResultSet(Specs...)
         return result;
     }
 }
+
+
+version(Have_vibe_d)
+{
+	import vibe.core.connectionpool;
+	
+	class PostgresDB {
+		private {
+			string[string] m_params;
+			ConnectionPool!PGConnection m_pool;
+		}
+		
+		this(string[string] conn_params)
+		{
+			m_params = conn_params.dup;
+			m_pool = new ConnectionPool!PGConnection(&createConnection);
+		}
+		
+		auto lockConnection() { return m_pool.lockConnection(); }
+		
+		private PGConnection createConnection()
+		{
+			return new PGConnection(m_params);
+		}
+	}
+}
+else
+{
+	class PostgresDB() {
+		static assert(false,
+		              "The 'PostgresDB' connection pool requires Vibe.d and therefore "~
+		              "must be used with -version=Have_vibe_d"
+		              );
+	}
+}
+

@@ -1,3 +1,5 @@
+module postgres.ops;
+
 /**
 Common relational database interfaces.
 
