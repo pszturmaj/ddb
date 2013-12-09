@@ -5,9 +5,7 @@
 	"copyright": "Copyright © 2013 Piotr Szturmaj",
 	"homepage": "https://github.com/pszturmaj/",
 	"authors": ["Piotr Szturmaj"],
-	"targetType": "sourceLibrary",
 	"dependencies": {
-		"vibe-d": {"version":"~master"}
-	},
-	"versions": ["Have_vibe_d"]
+		"vibe-d": {"version": "~master", "optional": true}
+	}
 }
