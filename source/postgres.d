@@ -196,7 +196,7 @@ class PGStream
 			m_socket = socket;
 	    }
 	}else{
-		@property SocksetStream socket() { return m_socket; }
+		@property SocketStream socket() { return m_socket; }
 		this(SocketStream socket){
 			m_socket = socket;
 		}
