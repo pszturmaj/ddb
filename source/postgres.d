@@ -1548,8 +1548,8 @@ class PGConnection
 			 version(Have_vibe_d){
 				stream = new PGStream(connectTCP(params["host"], port));
 			} else {
-				stream = new PGStream(new TcpSocket);
-				stream.socket.connect(new InternetAddress(params["host"], port));
+				stream = new PGStream(new SocketStream(new TcpSocket));
+				stream.socket.socket.connect(new InternetAddress(params["host"], port));
 			}
 
             sendStartupMessage(params);
