@@ -1085,6 +1085,7 @@ class PGConnection
         void sendBindMessage(string portalName, string statementName, PGParameters params)
         {
             int paramsLen = 0;
+            bool hasText = false;
 
 			foreach (param; params)
             {
@@ -1104,19 +1105,33 @@ class PGConnection
                     case PGType.INT2: checkParam!short(2); break;
                     case PGType.INT4: checkParam!int(4); break;
                     case PGType.INT8: checkParam!long(8); break;
-                    default: assert("Not implemented");
+                    case PGType.TEXT:
+                        paramsLen += param.value.coerce!string.length;
+                        hasText = true;
+                        break;
+                    default: assert(0, "Not implemented");
                 }
             }
             
-            int len = cast(int)( 4 + portalName.length + 1 + statementName.length + 1 + 2 + 2 + 2 +
+            int len = cast(int)( 4 + portalName.length + 1 + statementName.length + 1 + (hasText ? (params.length + 1) : 2) + 2 + 2 +
                 params.length * 4 + paramsLen + 2 + 2 );
             
             stream.write('B');
             stream.write(len);
             stream.writeCString(portalName);
             stream.writeCString(statementName);
-            stream.write(cast(short)1); // one parameter format code
-            stream.write(cast(short)1); // binary format
+            if(hasText)
+            {
+                stream.write(cast(short) params.length);
+                foreach(param; params)
+                    if(param.type == PGType.TEXT)
+                        stream.write(cast(short) 0); // text format
+                    else
+                        stream.write(cast(short) 1); // binary format
+            } else {
+                stream.write(cast(short)1); // one parameter format code
+                stream.write(cast(short)1); // binary format
+            }
             stream.write(cast(short)params.length);
             
             foreach (param; params)
@@ -1141,8 +1156,13 @@ class PGConnection
                         stream.write(cast(int)8);
                         stream.write(param.value.coerce!long);
                         break;
+                    case PGType.TEXT:
+                        auto s = param.value.coerce!string;
+                        stream.write(cast(int) s.length);
+                        stream.write(cast(ubyte[]) s);
+                        break;
                     default:
-						assert("Not implemented");
+						assert(0, "Not implemented");
                 }
             }
             
