@@ -1884,9 +1884,9 @@ class PGParameters
     {
         int result = 0;
 
-        foreach (param; params)
+        foreach (number; sort(params.keys))
         {
-            result = dg(param);
+            result = dg(params[number]);
             
             if (result)
                 break;
