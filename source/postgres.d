@@ -1113,7 +1113,7 @@ class PGConnection
                 }
             }
             
-            int len = cast(int)( 4 + portalName.length + 1 + statementName.length + 1 + (hasText ? (params.length + 1) : 2) + 2 + 2 +
+            int len = cast(int)( 4 + portalName.length + 1 + statementName.length + 1 + (hasText ? (params.length*2) : 2) + 2 + 2 +
                 params.length * 4 + paramsLen + 2 + 2 );
             
             stream.write('B');
@@ -1884,9 +1884,9 @@ class PGParameters
     {
         int result = 0;
 
-        foreach (param; params)
+        foreach (number; sort(params.keys))
         {
-            result = dg(param);
+            result = dg(params[number]);
             
             if (result)
                 break;
