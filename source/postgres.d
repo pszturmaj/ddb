@@ -1048,9 +1048,10 @@ class PGConnection
         
         void sendPasswordMessage(string password)
         {
+            int len = cast(int)(4 + password.length + 1);
 
             stream.write('p');
-            stream.write(password.length + 5);
+            stream.write(len);
             stream.writeCString(password);
         }
         
