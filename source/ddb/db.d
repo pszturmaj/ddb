@@ -1,4 +1,4 @@
-module postgres.ops;
+module ddb.db;
 
 /**
 Common relational database interfaces.

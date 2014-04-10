@@ -1,4 +1,4 @@
-module postgres.db;
+module ddb.postgres;
 
 /**
 PostgreSQL client implementation.
@@ -174,7 +174,7 @@ import std.variant;
 import std.algorithm;
 import std.stdio;
 import std.datetime;
-public import postgres.ops;
+public import ddb.db;
 
 private:
 
