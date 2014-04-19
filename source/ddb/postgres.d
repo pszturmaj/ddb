@@ -95,7 +95,7 @@ with vibe.d use -version=Have_vibe_d and use a ConnectionPool (PostgresDB Object
 without vibe.d you can use std sockets with PGConnection object
 
 import std.stdio;
-import postgres.db;
+import ddb.postgres;
 
 int main(string[] argv)
 {
@@ -1363,17 +1363,24 @@ class PGConnection
                     
                     msg.readCString(tag);
                     
-                    auto s2 = lastIndexOf(tag, ' ');
-                    if (s2 >= 0)
-                    {
-                        auto s1 = lastIndexOf(tag[0 .. s2], ' ');
-                        if (s1 >= 0)
-                        {
-                            // INSERT oid rows
-                            oid = to!uint(tag[s1 + 1 .. s2]);
-                        }
-                        
-                        rowsAffected = to!ulong(tag[s2 + 1 .. $]);
+                    auto s1 = indexOf(tag, ' ');
+                    if (s1 >= 0) {
+                        switch (tag[0 .. s1]) {
+                            case "INSERT":
+                                // INSERT oid rows
+                                auto s2 = lastIndexOf(tag, ' ');
+                                assert(s2 > s1);
+                                oid = to!uint(tag[s1 + 1 .. s2]);
+                                rowsAffected = to!ulong(tag[s2 + 1 .. $]);
+                                break;
+                            case "DELETE", "UPDATE", "MOVE", "FETCH":
+                                // DELETE rows
+                                rowsAffected = to!ulong(tag[s1 + 1 .. $]);
+                                break;
+                            default:
+                                // CREATE TABLE
+                                break;
+                         }
                     }
                     
                     goto receive;
