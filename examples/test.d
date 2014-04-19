@@ -27,17 +27,46 @@ int main(string[] argv)
     cmd.executeNonQuery;
     
     cmd.query = "INSERT INTO MyTest (name, value) VALUES ('foo', 1);";
-    cmd.executeNonQuery;
+    assert(cmd.executeNonQuery == 1); // 1 row inserted
 
-    cmd.query = q"{SELECT name, value FROM MyTest
-WHERE name = 'foo';}";
+    cmd.query = "SELECT name, value FROM MyTest;";
     auto result = cmd.executeQuery;
     try
     {
         foreach (row; result)
         {
             // Access results using column name or column index
+            assert(row["name"] == "foo");
+            assert(row[0] == "foo");
+            assert(row["value"] == 1);
+            assert(row[1] == 1);
             writeln(row["name"], " = ", row[1]);
+        }
+    }
+    finally
+    {
+        result.close;
+    }
+
+    cmd.query = "INSERT INTO MyTest (name, value) VALUES ('bar', 1);";
+    assert(cmd.executeNonQuery == 1); // 1 row inserted
+
+    cmd.query = "UPDATE MyTest SET value = 2 where value = 1";
+    assert(cmd.executeNonQuery == 2); //  2 rows updated
+
+    // reversing fields in SELECT means column indices change
+    cmd.query = q"{SELECT value, name FROM MyTest
+WHERE name = 'foo';}";;
+    result = cmd.executeQuery;
+    try
+    {
+        foreach (row; result)
+        {
+            assert(row["name"] == "foo");
+            assert(row[0] == 2);
+            assert(row["value"] == 2);
+            assert(row[1] == "foo");
+            writeln(row["name"], " = ", row["value"]);
         }
     }
     finally
