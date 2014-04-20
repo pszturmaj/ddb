@@ -1362,8 +1362,9 @@ class PGConnection
                     string tag;
                     
                     msg.readCString(tag);
-                    
-                    auto s1 = indexOf(tag, ' ');
+
+                    // GDC indexOf name conflict in std.string and std.algorithm                    
+                    auto s1 = std.string.indexOf(tag, ' ');
                     if (s1 >= 0) {
                         switch (tag[0 .. s1]) {
                             case "INSERT":
