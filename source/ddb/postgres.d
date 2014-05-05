@@ -288,9 +288,9 @@ class PGStream
 	}
 }
 
-string MD5toHex(in void[][] data...)
+string MD5toHex(T...)(in T data)
 {
-    return md5Of(data).toHexString;
+    return md5Of(data).toHexString!(Order.increasing, LetterCase.lower);
 }
 
 struct Message
@@ -1585,8 +1585,7 @@ class PGConnection
             
         receive:
             
-		Message msg = getMessage();import std.stdio;
-
+    		Message msg = getMessage();
 
             switch (msg.type)
             {
@@ -1627,7 +1626,6 @@ class PGConnection
                             enforce("password" in params, new ParamException("Required parameter 'password' not found"));
                             enforce(msg.data.length == 8);
 
-                            ubyte[16] digest;
                             string password = "md5" ~ MD5toHex(MD5toHex(
                                 params["password"], params["user"]), msg.data[4 .. 8]);
                             
