@@ -174,6 +174,7 @@ import std.variant;
 import std.algorithm;
 import std.stdio;
 import std.datetime;
+import std.utf;
 public import ddb.db;
 
 private:
@@ -288,9 +289,9 @@ class PGStream
 	}
 }
 
-string MD5toHex(T...)(in T data)
+char[32] MD5toHex(T...)(in T data)
 {
-    return md5Of(data).toHexString!(Order.increasing, LetterCase.lower);
+    return md5Of(data).toHexString!(LetterCase.lower);
 }
 
 struct Message
@@ -1627,7 +1628,7 @@ class PGConnection
                             enforce(msg.data.length == 8);
 
                             string password = "md5" ~ MD5toHex(MD5toHex(
-                                params["password"], params["user"]), msg.data[4 .. 8]);
+                                params["password"], params["user"]), msg.data[4 .. 8]).toUTF8;
                             
                             sendPasswordMessage(password);
                             
