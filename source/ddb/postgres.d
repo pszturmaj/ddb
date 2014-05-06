@@ -242,11 +242,23 @@ class PGStream
 		write(nativeToBigEndian(x));
 	}
     
+    void writeString(string x)
+    {
+        ubyte[] ub = cast(ubyte[])(x);
+        write(ub);
+    }
+
     void writeCString(string x)
     {
-		ubyte[] ub = cast(ubyte[])(x ~ "\0");
-		write(ub);
-	}
+        writeString(x);
+        write('\0');
+    }
+
+    void writeCString(char[] x)
+    {
+        write(cast(ubyte[])x);
+        write('\0');
+    }
 
     void write(const ref Date x)
     {
@@ -288,9 +300,9 @@ class PGStream
 	}
 }
 
-string MD5toHex(in void[][] data...)
+char[32] MD5toHex(T...)(in T data)
 {
-    return md5Of(data).toHexString;
+    return md5Of(data).toHexString!(LetterCase.lower);
 }
 
 struct Message
@@ -1585,8 +1597,7 @@ class PGConnection
             
         receive:
             
-		Message msg = getMessage();import std.stdio;
-
+    		Message msg = getMessage();
 
             switch (msg.type)
             {
@@ -1627,11 +1638,12 @@ class PGConnection
                             enforce("password" in params, new ParamException("Required parameter 'password' not found"));
                             enforce(msg.data.length == 8);
 
-                            ubyte[16] digest;
-                            string password = "md5" ~ MD5toHex(MD5toHex(
+                            char[3 + 32] password;
+                            password[0 .. 3] = "md5";
+                            password[3 .. $] = MD5toHex(MD5toHex(
                                 params["password"], params["user"]), msg.data[4 .. 8]);
                             
-                            sendPasswordMessage(password);
+                            sendPasswordMessage(to!string(password));
                             
                             goto receive;
                         default:
