@@ -1067,16 +1067,6 @@ class PGConnection
             stream.writeCString(password);
         }
         
-        void sendMD5PasswordMessage(char[32] password)
-        {
-            int len = 4 + 3 + 32 + 1;
-
-            stream.write('p');
-            stream.write(len);
-            stream.writeString("md5");
-            stream.writeCString(password);
-        }
-        
         void sendParseMessage(string statementName, string query, int[] oids)
         {
             int len = cast(int)(4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4);
@@ -1648,10 +1638,12 @@ class PGConnection
                             enforce("password" in params, new ParamException("Required parameter 'password' not found"));
                             enforce(msg.data.length == 8);
 
-                            char[32] password = MD5toHex(MD5toHex(
+                            char[3 + 32] password;
+                            password[0 .. 3] = "md5";
+                            password[3 .. $] = MD5toHex(MD5toHex(
                                 params["password"], params["user"]), msg.data[4 .. 8]);
                             
-                            sendMD5PasswordMessage(password);
+                            sendPasswordMessage(to!string(password));
                             
                             goto receive;
                         default:
