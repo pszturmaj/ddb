@@ -623,8 +623,8 @@ struct Message
             case 16: // bool
                 static if (isConvertible!(T, bool))
                     return _to!T(read!bool);
-                else
-                    convError!T;
+                else {
+                    convError!T; assert(false); }
             case 26, 24, 2202, 2203, 2204, 2205, 2206, 3734, 3769: // oid and reg*** aliases
                 static if (isConvertible!(T, uint))
                     return _to!T(read!uint);
@@ -633,28 +633,28 @@ struct Message
             case 21: // int2
                 static if (isConvertible!(T, short))
                     return _to!T(read!short);
-                else
-                    convError!T;
+                else {
+                    convError!T; assert(false); }
             case 23: // int4
                 static if (isConvertible!(T, int))
                     return _to!T(read!int);
-                else
-                    convError!T;
+                else {
+                    convError!T; assert(false); }
             case 20: // int8
                 static if (isConvertible!(T, long))
                     return _to!T(read!long);
-                else
-                    convError!T;
+                else {
+                    convError!T; assert(false); }
             case 700: // float4
                 static if (isConvertible!(T, float))
                     return _to!T(read!float);
-                else
-                    convError!T;
+                else {
+                    convError!T; assert(false); }
             case 701: // float8
                 static if (isConvertible!(T, double))
                     return _to!T(read!double);
-                else
-                    convError!T;
+                else {
+                    convError!T; assert(false); }
             case 1042, 1043, 25, 19, 705: // bpchar, varchar, text, name, unknown
                 static if (isConvertible!(T, string))
                     return _to!T(readString(len));
@@ -2105,7 +2105,7 @@ class PGCommand
     Throws: Exception if result doesn't contain any rows or field count do not match.
     Throws: Exception if result contains more than one row when throwIfMoreRows is true.
     */
-    DBRow!Specs executeRow(Specs...)(throwIfMoreRows = true)
+    DBRow!Specs executeRow(Specs...)(bool throwIfMoreRows = true)
     {
         auto result = executeQuery!Specs();
         scope(exit) result.close();
