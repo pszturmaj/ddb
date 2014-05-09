@@ -174,6 +174,7 @@ import std.variant;
 import std.algorithm;
 import std.stdio;
 import std.datetime;
+import std.uuid;
 public import ddb.db;
 
 private:
@@ -402,7 +403,14 @@ struct Message
         x = data[position .. position + len];
 		position += len;
 	}
-    
+
+    void read()(out UUID u) // uuid
+    {
+        ubyte[16] uuidData = data[position .. position + 16];
+        position += 16;
+        u = UUID(uuidData);
+    }
+
     void read()(out Date x) // date
 	{
 		int days = read!int; // number of days since 1 Jan 2000
@@ -663,6 +671,11 @@ struct Message
             case 17: // bytea
                 static if (isConvertible!(T, ubyte[]))
                     return _to!T(read!(ubyte[])(len));
+                else
+                    throw convError!T();
+            case 2950: // UUID
+                static if(isConvertible!(T, UUID))
+                    return _to!T(read!UUID());
                 else
                     throw convError!T();
             case 18: // "char"
