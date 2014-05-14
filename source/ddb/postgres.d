@@ -1711,14 +1711,14 @@ class PGConnection
         }
         
         /// ditto
-        DBRow!Specs executeRow(Specs...)(string query, throwIfMoreRows = true)
+        DBRow!Specs executeRow(Specs...)(string query, bool throwIfMoreRows = true)
         {
             scope cmd = new PGCommand(this, query);
             return cmd.executeRow!Specs(throwIfMoreRows);
         }
         
         /// ditto
-        T executeScalar(T)(string query, throwIfMoreRows = true)
+        T executeScalar(T)(string query, bool throwIfMoreRows = true)
         {
             scope cmd = new PGCommand(this, query);
             return cmd.executeScalar!T(throwIfMoreRows);
