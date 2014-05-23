@@ -1244,6 +1244,7 @@ class PGConnection
                 case 'E':
                     // ErrorResponse
                     ResponseMessage response = handleResponseMessage(msg);
+                    sendSyncMessage();
                     throw new ServerErrorException(response);
                 case '1':
                     // ParseComplete
@@ -1296,6 +1297,7 @@ class PGConnection
                 case 'E':
                     // ErrorResponse
                     ResponseMessage response = handleResponseMessage(msg);
+                    sendSyncMessage();
                     throw new ServerErrorException(response);
                 case '3':
                     // CloseComplete
