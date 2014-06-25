@@ -1820,10 +1820,10 @@ class PGParameter
         return _value;
     }
     /// ditto
-    @property Variant value(Variant v)
+    @property Variant value(T)(T v)
     {
         params.changed = true;
-        return _value = v;
+        return _value = Variant(v);
     }
     
     private this(PGParameters params, short index, PGType type)

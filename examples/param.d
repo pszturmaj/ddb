@@ -1,5 +1,4 @@
 import std.stdio;
-import std.variant;
 import ddb.postgres;
 
 struct KeyValue {
@@ -33,12 +32,12 @@ void main(string[] argv)
     cmd.executeNonQuery;
     
     cmd.query = "INSERT INTO MyTest (name, value) VALUES ($1, $2);";
-    cmd.parameters.add(1, PGType.TEXT).value = Variant("foo");
-    cmd.parameters.add(2, PGType.INT4).value = Variant(1);
+    cmd.parameters.add(1, PGType.TEXT).value = "foo";
+    cmd.parameters.add(2, PGType.INT4).value = 1;
     assert(cmd.executeNonQuery() == 1); // 1 row inserted
 
     cmd.query = "SELECT name, value FROM MyTest WHERE name = $1;";
-    cmd.parameters.add(1, PGType.TEXT).value = Variant("foo");
+    cmd.parameters.add(1, PGType.TEXT).value = "foo";
 
     // When there is only one result (e.g. when querying using a primary or
     // unique key), use executeRow to save having to loop and close result.
