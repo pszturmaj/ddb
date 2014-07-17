@@ -1115,6 +1115,10 @@ class PGConnection
                         paramsLen += param.value.coerce!string.length;
                         hasText = true;
                         break;
+                    case PGType.BYTEA:
+                        paramsLen += param.value.coerce!(char[]).length;
+                        hasText = true;
+                        break;
                     default: assert(0, "Not implemented");
                 }
             }
@@ -1164,6 +1168,11 @@ class PGConnection
                         break;
                     case PGType.TEXT:
                         auto s = param.value.coerce!string;
+                        stream.write(cast(int) s.length);
+                        stream.write(cast(ubyte[]) s);
+                        break;
+                    case PGType.BYTEA:
+                        auto s = param.value.coerce!(char[]);
                         stream.write(cast(int) s.length);
                         stream.write(cast(ubyte[]) s);
                         break;
