@@ -1116,8 +1116,7 @@ class PGConnection
                         hasText = true;
                         break;
                     case PGType.BYTEA:
-                        paramsLen += param.value.coerce!(char[]).length;
-                        hasText = true;
+                        paramsLen += param.value.length;
                         break;
                     default: assert(0, "Not implemented");
                 }
@@ -1172,9 +1171,15 @@ class PGConnection
                         stream.write(cast(ubyte[]) s);
                         break;
                     case PGType.BYTEA:
-                        auto s = param.value.coerce!(char[]);
+                        auto s = param.value;
                         stream.write(cast(int) s.length);
-                        stream.write(cast(ubyte[]) s);
+
+                        ubyte[] x;
+                        x.length = s.length;
+                        for (int i = 0; i < x.length; i++) {
+                            x[i] = s[i].get!(ubyte);
+                        }
+                        stream.write(x);
                         break;
                     default:
 						assert(0, "Not implemented");
