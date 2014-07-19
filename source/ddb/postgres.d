@@ -725,6 +725,11 @@ struct Message
                     return T(readArray!(Variant[]));
                 else
                     throw convError!T();
+            case 114: //JSON
+                static if (isConvertible!(T, string))
+                    return _to!T(readString(len));
+                else
+                    throw convError!T();
             default:
                 if (oid in conn.arrayTypes)
                     goto case 2287;
@@ -832,7 +837,10 @@ enum PGType : int
     INT4 = 23,
     INT8 = 20,
     FLOAT4 = 700,
-    FLOAT8 = 701
+    FLOAT8 = 701,
+
+    JSON = 114,
+    JSONARRAY = 199
 };
 
 class ParamException : Exception
@@ -1118,6 +1126,9 @@ class PGConnection
                     case PGType.BYTEA:
                         paramsLen += param.value.length;
                         break;
+                    case PGType.JSON:
+                        paramsLen += param.value.coerce!string.length; // TODO: object serialisation
+                        break;
                     default: assert(0, "Not implemented");
                 }
             }
@@ -1180,6 +1191,11 @@ class PGConnection
                             x[i] = s[i].get!(ubyte);
                         }
                         stream.write(x);
+                        break;
+                    case PGType.JSON:
+                        auto s = param.value.coerce!string;
+                        stream.write(cast(int) s.length);
+                        stream.write(cast(ubyte[]) s);
                         break;
                     default:
 						assert(0, "Not implemented");
