@@ -266,6 +266,11 @@ class PGStream
         write(cast(int)(x.dayOfGregorianCal - PGEpochDay));
     }
 
+    void write(Date x)
+    {
+        write(cast(int)(x.dayOfGregorianCal - PGEpochDay));
+    }
+
     void write(const ref TimeOfDay x)
 	{
 		write(cast(int)((x - PGEpochTime).total!"usecs"));
@@ -276,6 +281,11 @@ class PGStream
 		write(cast(int)((x - PGEpochDateTime).total!"usecs"));
     }
     
+    void write(DateTime x) // timestamp
+	{
+		write(cast(int)((x - PGEpochDateTime).total!"usecs"));
+    }
+
     void write(const ref SysTime x) // timestamptz
 	{
 		write(cast(int)((x - SysTime(PGEpochDateTime, UTC())).total!"usecs"));
@@ -839,6 +849,14 @@ enum PGType : int
     FLOAT4 = 700,
     FLOAT8 = 701,
 
+    // reference https://github.com/lpsmith/postgresql-simple/blob/master/src/Database/PostgreSQL/Simple/TypeInfo/Static.hs#L74
+    DATE = 1082,
+    TIME = 1083,
+    TIMESTAMP = 1114,
+    TIMESTAMPTZ = 1184,
+    INTERVAL = 1186,
+    TIMETZ = 1266,
+
     JSON = 114,
     JSONARRAY = 199
 };
@@ -1129,6 +1147,8 @@ class PGConnection
                     case PGType.JSON:
                         paramsLen += param.value.coerce!string.length; // TODO: object serialisation
                         break;
+                    case PGType.DATE:
+                        paramsLen += 4; break;
                     default: assert(0, "Not implemented");
                 }
             }
@@ -1196,6 +1216,10 @@ class PGConnection
                         auto s = param.value.coerce!string;
                         stream.write(cast(int) s.length);
                         stream.write(cast(ubyte[]) s);
+                        break;
+                    case PGType.DATE:
+                        stream.write(cast(int) 4);
+                        stream.write(Date.fromISOString(param.value.coerce!string));
                         break;
                     default:
 						assert(0, "Not implemented");
