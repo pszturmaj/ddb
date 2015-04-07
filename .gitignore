@@ -1,2 +1,2 @@
 .dub
-libddb.a
+*.a
