@@ -1115,7 +1115,7 @@ class PGConnection
                         paramsLen += param.value.coerce!string.length;
                         hasText = true;
                         break;
-                    default: assert(0, "Not implemented");
+                    default: assert(0, to!string(param.type) ~ " Not implemented");
                 }
             }
             
@@ -1168,7 +1168,7 @@ class PGConnection
                         stream.write(cast(ubyte[]) s);
                         break;
                     default:
-						assert(0, "Not implemented");
+                    assert(0, to!string(param.type) ~ "Not implemented");
                 }
             }
             
