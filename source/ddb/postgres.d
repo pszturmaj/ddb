@@ -328,31 +328,36 @@ struct Message
     
     void read()(out short x)
     {
-		x = bigEndianToNative!short(cast(ubyte[short.sizeof])data[position..position+short.sizeof]);
+        ubyte[short.sizeof] y = data[position..position+short.sizeof];
+		x = bigEndianToNative!short(y);
         position += 2;
     }
 
     void read()(out int x)
     {
-		x = bigEndianToNative!int(cast(ubyte[int.sizeof])data[position..position+int.sizeof]);
+        ubyte[int.sizeof] y = data[position..position+int.sizeof];
+		x = bigEndianToNative!int(y);
         position += 4;
     }
     
     void read()(out long x)
     {
-		x = bigEndianToNative!long(cast(ubyte[8])data[position..position+long.sizeof]);
+        ubyte[long.sizeof] y = data[position..position+long.sizeof];
+		x = bigEndianToNative!long(y);
 		position += 8;
 	}
 	
 	void read()(out float x)
     {
-		x = bigEndianToNative!float(cast(ubyte[float.sizeof])data[position..position+float.sizeof]);
+        ubyte[float.sizeof] y = data[position..position+float.sizeof];
+		x = bigEndianToNative!float( y );
 		position += float.sizeof;
     }
     
     void read()(out double x)
     {
-		x = bigEndianToNative!double(cast(ubyte[double.sizeof])data[position..position+double.sizeof]);
+        ubyte[double.sizeof] y = data[position..position+double.sizeof];
+		x = bigEndianToNative!double(y);
 		position += double.sizeof;
     }
     
@@ -388,7 +393,8 @@ struct Message
     
     void read()(out uint x)
 	{
-		x = bigEndianToNative!uint( cast(ubyte[4]) data[position .. position + uint.sizeof] );
+        ubyte[int.sizeof] y = data[position .. position + uint.sizeof];
+		x = bigEndianToNative!uint( y );
 		position += 4;
 	}
     
