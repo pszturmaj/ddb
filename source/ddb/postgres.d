@@ -284,8 +284,8 @@ class PGStream
     // BUG: Does not support months
     void write(const ref core.time.Duration x) // interval
 	{
-		int months = cast(int)(x.weeks/4);
-		int days = cast(int)x.days;
+		int months = cast(int)(x.split!"weeks".weeks/28);
+		int days = cast(int)x.split!"days".days;
         long usecs = x.total!"usecs" - convert!("days", "usecs")(days);
         
         write(usecs);
@@ -326,36 +326,15 @@ struct Message
         x = data[position++];
     }
     
-    void read()(out short x)
+
+    void read(Int)(out Int x) if((isIntegral!Int || isFloatingPoint!Int) && Int.sizeof > 1) 
     {
-		x = bigEndianToNative!short(cast(ubyte[short.sizeof])data[position..position+short.sizeof]);
-        position += 2;
+        ubyte[Int.sizeof] buf;
+        buf[] = data[position..position+Int.sizeof];
+        x = bigEndianToNative!Int(buf);
+        position += Int.sizeof;
     }
 
-    void read()(out int x)
-    {
-		x = bigEndianToNative!int(cast(ubyte[int.sizeof])data[position..position+int.sizeof]);
-        position += 4;
-    }
-    
-    void read()(out long x)
-    {
-		x = bigEndianToNative!long(cast(ubyte[8])data[position..position+long.sizeof]);
-		position += 8;
-	}
-	
-	void read()(out float x)
-    {
-		x = bigEndianToNative!float(cast(ubyte[float.sizeof])data[position..position+float.sizeof]);
-		position += float.sizeof;
-    }
-    
-    void read()(out double x)
-    {
-		x = bigEndianToNative!double(cast(ubyte[double.sizeof])data[position..position+double.sizeof]);
-		position += double.sizeof;
-    }
-    
     string readCString()
     {
         string x;
@@ -386,23 +365,17 @@ struct Message
 		position += len;
 	}
     
-    void read()(out uint x)
-	{
-		x = bigEndianToNative!uint( cast(ubyte[4]) data[position .. position + uint.sizeof] );
-		position += 4;
-	}
-    
     void read()(out bool x)
     {
         x = cast(bool)data[position++];
     }
     
     void read()(out ubyte[] x, int len)
-	{
-		enforce(position + len <= data.length);
+    {
+        enforce(position + len <= data.length);
         x = data[position .. position + len];
-		position += len;
-	}
+        position += len;
+    }
 
     void read()(out UUID u) // uuid
     {
@@ -412,10 +385,10 @@ struct Message
     }
 
     void read()(out Date x) // date
-	{
-		int days = read!int; // number of days since 1 Jan 2000
-		x = PGEpochDate + dur!"days"(days);
-	}
+    {
+        int days = read!int; // number of days since 1 Jan 2000
+        x = PGEpochDate + dur!"days"(days);
+    }
     
     void read()(out TimeOfDay x) // time
     {
@@ -450,7 +423,8 @@ struct Message
     {
         TimeOfDay time = read!TimeOfDay;
         int zone = read!int / 60; // originally in seconds, convert it to minutes
-		auto stz = new immutable SimpleTimeZone(zone);
+        Duration duration = dur!"minutes"(zone);
+        auto stz = new immutable SimpleTimeZone(duration);
         return SysTime(DateTime(Date(0, 1, 1), time), stz);
     }
     
