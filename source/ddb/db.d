@@ -309,7 +309,8 @@ $(UL
 */
 template isCompositeType(T)
 {
-    static if (isTuple!T || is(T == struct) || isStaticArray!T)
+    import std.datetime : SysTime;
+    static if (isTuple!T || (is(T == struct) && !(is(T == SysTime))) || isStaticArray!T)
         enum isCompositeType = true;
     else
         enum isCompositeType = false;
