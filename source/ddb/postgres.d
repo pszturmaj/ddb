@@ -266,6 +266,11 @@ class PGStream
         write(cast(int)(x.dayOfGregorianCal - PGEpochDay));
     }
 
+    void write(Date x)
+    {
+        write(cast(int)(x.dayOfGregorianCal - PGEpochDay));
+    }
+
     void write(const ref TimeOfDay x)
 	{
 		write(cast(int)((x - PGEpochTime).total!"usecs"));
@@ -276,6 +281,11 @@ class PGStream
 		write(cast(int)((x - PGEpochDateTime).total!"usecs"));
     }
     
+    void write(DateTime x) // timestamp
+	{
+		write(cast(int)((x - PGEpochDateTime).total!"usecs"));
+    }
+
     void write(const ref SysTime x) // timestamptz
 	{
 		write(cast(int)((x - SysTime(PGEpochDateTime, UTC())).total!"usecs"));
@@ -725,6 +735,11 @@ struct Message
                     return T(readArray!(Variant[]));
                 else
                     throw convError!T();
+            case 114: //JSON
+                static if (isConvertible!(T, string))
+                    return _to!T(readString(len));
+                else
+                    throw convError!T();
             default:
                 if (oid in conn.arrayTypes)
                     goto case 2287;
@@ -832,7 +847,18 @@ enum PGType : int
     INT4 = 23,
     INT8 = 20,
     FLOAT4 = 700,
-    FLOAT8 = 701
+    FLOAT8 = 701,
+
+    // reference https://github.com/lpsmith/postgresql-simple/blob/master/src/Database/PostgreSQL/Simple/TypeInfo/Static.hs#L74
+    DATE = 1082,
+    TIME = 1083,
+    TIMESTAMP = 1114,
+    TIMESTAMPTZ = 1184,
+    INTERVAL = 1186,
+    TIMETZ = 1266,
+
+    JSON = 114,
+    JSONARRAY = 199
 };
 
 class ParamException : Exception
@@ -1115,6 +1141,14 @@ class PGConnection
                         paramsLen += param.value.coerce!string.length;
                         hasText = true;
                         break;
+                    case PGType.BYTEA:
+                        paramsLen += param.value.length;
+                        break;
+                    case PGType.JSON:
+                        paramsLen += param.value.coerce!string.length; // TODO: object serialisation
+                        break;
+                    case PGType.DATE:
+                        paramsLen += 4; break;
                     default: assert(0, "Not implemented");
                 }
             }
@@ -1166,6 +1200,26 @@ class PGConnection
                         auto s = param.value.coerce!string;
                         stream.write(cast(int) s.length);
                         stream.write(cast(ubyte[]) s);
+                        break;
+                    case PGType.BYTEA:
+                        auto s = param.value;
+                        stream.write(cast(int) s.length);
+
+                        ubyte[] x;
+                        x.length = s.length;
+                        for (int i = 0; i < x.length; i++) {
+                            x[i] = s[i].get!(ubyte);
+                        }
+                        stream.write(x);
+                        break;
+                    case PGType.JSON:
+                        auto s = param.value.coerce!string;
+                        stream.write(cast(int) s.length);
+                        stream.write(cast(ubyte[]) s);
+                        break;
+                    case PGType.DATE:
+                        stream.write(cast(int) 4);
+                        stream.write(Date.fromISOString(param.value.coerce!string));
                         break;
                     default:
 						assert(0, "Not implemented");
