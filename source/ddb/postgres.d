@@ -1010,12 +1010,14 @@ class PGConnection
 			stream.socket.read(ubi); // message length, doesn't include type byte
 
 			len = bigEndianToNative!int(ubi) - 4;
-            
-            ubyte[] msg = new ubyte[len];
+            if( len>0 ){
+                ubyte[] msg = new ubyte[len];
 
-            stream.socket.read(msg);
+                stream.socket.read(msg);
             
-            return Message(this, type, msg);
+                return Message(this, type, msg);
+            }
+        else { return Message(this, type, []); } 
         }
         
         void sendStartupMessage(const string[string] params)
@@ -1436,7 +1438,7 @@ class PGConnection
         DBRow!Specs fetchRow(Specs...)(ref Message msg, ref PGFields fields)
         {
             alias DBRow!Specs Row;
-            
+        import std.stdio; writeln("-->", fields); 
             static if (Row.hasStaticLength)
             {
                 alias Row.fieldTypes fieldTypes;
@@ -1447,6 +1449,7 @@ class PGConnection
                     
                     foreach (i; 0 .. fieldTypes.length)
                     {
+                        s ~= text(`import std.stdio; writeln("field index `, i, `");`);
                         s ~= "msg.read(fieldLen);\n";
                         s ~= "if (fieldLen == -1)\n";
                         s ~= text("row.setNull!(", i, ")();\n");
