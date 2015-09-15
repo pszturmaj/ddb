@@ -344,7 +344,10 @@ static assert(isVariantN!(Nullable!int));
 
 template isNullable(T)
 {
-    static if ((isVariantN!T && T.allowed!(void*)) || is(T X == Nullable!U, U))
+    alias STN = std.typecons.Nullable;
+    alias DDN = .Nullable;
+
+    static if ((isVariantN!T && T.allowed!(void*)) || is(T X == DDN!U, U) || is(T X == STN!U, U))
         enum isNullable = true;
     else
         enum isNullable = false;
