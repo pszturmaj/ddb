@@ -159,7 +159,7 @@ struct DBRow(Specs...)
         alias Specs[0] T;
     else
         alias Tuple!Specs T;
-    
+
     T base;
     alias base this;
 
@@ -175,7 +175,7 @@ struct DBRow(Specs...)
         {
             base.length = length;
         }
-        
+
         void setNull(size_t index)
         {
             static if (isNullable!ElemType)
@@ -183,24 +183,24 @@ struct DBRow(Specs...)
             else
                 throw new Exception("Cannot set NULL to field " ~ to!string(index) ~ " of " ~ T.stringof ~ ", it is not nullable");
         }
-        
+
         ColumnToIndexDelegate columnToIndex;
-        
+
         ElemType opIndex(string column, size_t index)
         {
             return base[columnToIndex(column, index)];
         }
-        
+
         ElemType opIndexAssign(ElemType value, string column, size_t index)
         {
             return base[columnToIndex(column, index)] = value;
         }
-        
+
         ElemType opIndex(string column)
         {
             return base[columnToIndex(column, 0)];
         }
-        
+
         ElemType opIndexAssign(ElemType value, string column)
         {
             return base[columnToIndex(column, 0)] = value;
@@ -227,14 +227,14 @@ struct DBRow(Specs...)
                 else
                     alias TypeTuple!U ArrayTypeTuple;
             }
-            
+
             alias ArrayTypeTuple!T fieldTypes;
         }
         else
             alias FieldTypeTuple!T fieldTypes;
-        
+
         enum hasStaticLength = true;
-        
+
         void set(U, size_t index)(U value)
         {
             static if (isStaticArray!T)
@@ -242,7 +242,7 @@ struct DBRow(Specs...)
             else
                 base.tupleof[index] = value;
         }
-        
+
         void setNull(size_t index)()
         {
             static if (isNullable!(fieldTypes[index]))
@@ -265,7 +265,7 @@ struct DBRow(Specs...)
         {
             base = value;
         }
-        
+
         void setNull(size_t index)()
         {
             static if (isNullable!T)
@@ -274,12 +274,12 @@ struct DBRow(Specs...)
                 throw new Exception("Cannot set NULL to " ~ T.stringof ~ ", it is not nullable");
         }
     }
-    
+
     static if (hasStaticLength)
     {
         /**
         Checks if received field count matches field count of this row type.
-        
+
         This is used internally by clients and it applies only to DBRow types, which have static number of fields.
         */
         static pure void checkReceivedFieldCount(int fieldCount)
@@ -288,7 +288,7 @@ struct DBRow(Specs...)
                 throw new Exception("Received field count is not equal to " ~ T.stringof ~ "'s field count");
         }
     }
-    
+
     string toString()
     {
         return to!string(base);

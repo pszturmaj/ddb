@@ -30,7 +30,7 @@ void main(string[] argv)
     // using strings, multi-line strings, or string imports
     cmd.query = import("test-create.sql");
     cmd.executeNonQuery;
-    
+
     cmd.query = "INSERT INTO MyTest (name, value) VALUES ($1, $2);";
     cmd.parameters.add(1, PGType.TEXT).value = "foo";
     cmd.parameters.add(2, PGType.INT4).value = 1;

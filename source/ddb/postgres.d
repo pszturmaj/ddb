@@ -78,7 +78,7 @@ with vibe.d use -version=Have_vibe_d and use a ConnectionPool (PostgresDB Object
 
 	auto cmd = new PGCommand(conn, "SELECT typname, typlen FROM pg_type");
 	auto result = cmd.executeQuery;
-	
+
 	try
 	{
 		foreach (row; result)
@@ -110,7 +110,7 @@ int main(string[] argv)
 
     auto cmd = new PGCommand(conn, "SELECT typname, typlen FROM pg_type");
     auto result = cmd.executeQuery;
-    
+
     try
     {
         foreach (row; result)
@@ -207,42 +207,42 @@ class PGStream
 	/*
 	 * I'm not too sure about this function
 	 * Should I keep the length?
-	 */	
+	 */
 	void write(ubyte[] x)
 	{
 		m_socket.write(x);
 	}
-	
+
 	void write(ubyte x)
 	{
 		write(nativeToBigEndian(x)); // ubyte[]
 	}
-    
+
     void write(short x)
 	{
 		write(nativeToBigEndian(x)); // ubyte[]
 	}
-    
+
     void write(int x)
 	{
 		write(nativeToBigEndian(x)); // ubyte[]
 	}
-	
+
     void write(long x)
     {
 		write(nativeToBigEndian(x));
 	}
-    
+
     void write(float x)
     {
 		write(nativeToBigEndian(x)); // ubyte[]
     }
-    
+
     void write(double x)
     {
 		write(nativeToBigEndian(x));
 	}
-    
+
     void writeString(string x)
     {
         ubyte[] ub = cast(ubyte[])(x);
@@ -280,7 +280,7 @@ class PGStream
 	{
 		write(cast(int)((x - PGEpochDateTime).total!"usecs"));
     }
-    
+
     void write(DateTime x) // timestamp
 	{
 		write(cast(int)((x - PGEpochDateTime).total!"usecs"));
@@ -290,19 +290,19 @@ class PGStream
 	{
 		write(cast(int)((x - SysTime(PGEpochDateTime, UTC())).total!"usecs"));
     }
-    
+
     // BUG: Does not support months
     void write(const ref core.time.Duration x) // interval
 	{
 		int months = cast(int)(x.split!"weeks".weeks/28);
 		int days = cast(int)x.split!"days".days;
         long usecs = x.total!"usecs" - convert!("days", "usecs")(days);
-        
+
         write(usecs);
         write(days);
 		write(months);
 	}
-    
+
     void writeTimeTz(const ref SysTime x) // timetz
 	{
 		TimeOfDay t = cast(TimeOfDay)x;
@@ -321,7 +321,7 @@ struct Message
     PGConnection conn;
     char type;
     ubyte[] data;
-    
+
     private size_t position = 0;
 
     T read(T, Params...)(Params p)
@@ -330,14 +330,14 @@ struct Message
         read(value, p);
         return value;
     }
-    
+
     void read()(out char x)
     {
         x = data[position++];
     }
-    
 
-    void read(Int)(out Int x) if((isIntegral!Int || isFloatingPoint!Int) && Int.sizeof > 1) 
+
+    void read(Int)(out Int x) if((isIntegral!Int || isFloatingPoint!Int) && Int.sizeof > 1)
     {
         ubyte[Int.sizeof] buf;
         buf[] = data[position..position+Int.sizeof];
@@ -351,35 +351,35 @@ struct Message
         readCString(x);
         return x;
     }
-    
+
     void readCString(out string x)
     {
         ubyte* p = data.ptr + position;
-        
+
         while (*p > 0)
             p++;
 		x = cast(string)data[position .. cast(size_t)(p - data.ptr)];
         position = cast(size_t)(p - data.ptr + 1);
     }
-    
+
     string readString(int len)
     {
         string x;
         readString(x, len);
         return x;
     }
-    
+
     void readString(out string x, int len)
 	{
 		x = cast(string)(data[position .. position + len]);
 		position += len;
 	}
-    
+
     void read()(out bool x)
     {
         x = cast(bool)data[position++];
     }
-    
+
     void read()(out ubyte[] x, int len)
     {
         enforce(position + len <= data.length);
@@ -399,36 +399,36 @@ struct Message
         int days = read!int; // number of days since 1 Jan 2000
         x = PGEpochDate + dur!"days"(days);
     }
-    
+
     void read()(out TimeOfDay x) // time
     {
         long usecs = read!long;
         x = PGEpochTime + dur!"usecs"(usecs);
     }
-    
+
     void read()(out DateTime x) // timestamp
     {
         long usecs = read!long;
         x = PGEpochDateTime + dur!"usecs"(usecs);
     }
-    
+
     void read()(out SysTime x) // timestamptz
     {
         long usecs = read!long;
         x = SysTime(PGEpochDateTime + dur!"usecs"(usecs), UTC());
         x.timezone = LocalTime();
     }
-    
+
     // BUG: Does not support months
     void read()(out core.time.Duration x) // interval
     {
         long usecs = read!long;
         int days = read!int;
         int months = read!int;
-        
+
         x = dur!"days"(days) + dur!"usecs"(usecs);
     }
-    
+
     SysTime readTimeTz() // timetz
     {
         TimeOfDay time = read!TimeOfDay;
@@ -437,7 +437,7 @@ struct Message
         auto stz = new immutable SimpleTimeZone(duration);
         return SysTime(DateTime(Date(0, 1, 1), time), stz);
     }
-    
+
     T readComposite(T)()
     {
         alias DBRow!T Record;
@@ -445,11 +445,11 @@ struct Message
         static if (Record.hasStaticLength)
         {
             alias Record.fieldTypes fieldTypes;
-            
+
             static string genFieldAssigns() // CTFE
             {
                 string s = "";
-                
+
                 foreach (i; 0 .. fieldTypes.length)
                 {
                     s ~= "read(fieldOid);\n";
@@ -462,55 +462,55 @@ struct Message
                               ");\n");
                     // text() doesn't work with -inline option, CTFE bug
                 }
-                
+
                 return s;
             }
         }
 
         Record record;
-        
+
         int fieldCount, fieldLen;
         uint fieldOid;
-        
+
         read(fieldCount);
-        
+
         static if (Record.hasStaticLength)
             mixin(genFieldAssigns);
         else
         {
             record.setLength(fieldCount);
-            
+
             foreach (i; 0 .. fieldCount)
             {
                 read(fieldOid);
                 read(fieldLen);
-                
+
                 if (fieldLen == -1)
                     record.setNull(i);
                 else
                     record[i] = readBaseType!(Record.ElemType)(fieldOid, fieldLen);
             }
         }
-        
+
         return record.base;
     }
 	mixin template elmnt(U : U[])
 	{
 		alias U ElemType;
-	}    
+	}
     private AT readDimension(AT)(int[] lengths, uint elementOid, int dim)
     {
 
         mixin elmnt!AT;
-        
+
         int length = lengths[dim];
-        
+
         AT array;
         static if (isDynamicArray!AT)
             array.length = length;
-        
+
         int fieldLen;
-        
+
         foreach(i; 0 .. length)
         {
             static if (isArray!ElemType && !isSomeString!ElemType)
@@ -521,7 +521,7 @@ struct Message
                     alias nullableTarget!ElemType E;
                 else
                     alias ElemType E;
-                
+
                 read(fieldLen);
                 if (fieldLen == -1)
                 {
@@ -534,74 +534,74 @@ struct Message
                     array[i] = readBaseType!E(elementOid, fieldLen);
             }
         }
-        
+
         return array;
     }
-    
+
     T readArray(T)()
         if (isArray!T)
     {
         alias multiArrayElemType!T U;
-        
+
         // todo: more validation, better lowerBounds support
         int dims, hasNulls;
         uint elementOid;
         int[] lengths, lowerBounds;
-        
+
         read(dims);
         read(hasNulls); // 0 or 1
         read(elementOid);
-        
+
         if (dims == 0)
             return T.init;
-        
+
         enforce(arrayDimensions!T == dims, "Dimensions of arrays do not match");
         static if (!isNullable!U && !isSomeString!U)
             enforce(!hasNulls, "PostgreSQL returned NULLs but array elements are not Nullable");
-        
+
         lengths.length = lowerBounds.length = dims;
-        
+
         int elementCount = 1;
-        
+
         foreach(i; 0 .. dims)
         {
             int len;
-            
+
             read(len);
             read(lowerBounds[i]);
             lengths[i] = len;
-            
+
             elementCount *= len;
         }
-        
+
         T array = readDimension!T(lengths, elementOid, 0);
-        
+
         return array;
     }
-    
+
     T readEnum(T)(int len)
     {
         string genCases() // CTFE
         {
             string s;
-            
+
             foreach (name; __traits(allMembers, T))
             {
                 s ~= text(`case "`, name, `": return T.`, name, `;`);
             }
-            
+
             return s;
         }
-        
+
         string enumMember = readString(len);
-        
+
         switch (enumMember)
         {
             mixin(genCases);
             default: throw new ConvException("Can't set enum value '" ~ enumMember ~ "' to enum type " ~ T.stringof);
         }
     }
-    
+
     T readBaseType(T)(uint oid, int len = 0)
     {
         auto convError(T)()
@@ -615,7 +615,7 @@ struct Message
             case 16: // bool
                 static if (isConvertible!(T, bool))
                     return _to!T(read!bool);
-                else 
+                else
                     throw convError!T();
             case 26, 24, 2202, 2203, 2204, 2205, 2206, 3734, 3769: // oid and reg*** aliases
                 static if (isConvertible!(T, uint))
@@ -685,7 +685,7 @@ struct Message
             case 1184: // timestamptz
                 static if (isConvertible!(T, SysTime))
                     return _to!T(read!SysTime);
-                else 
+                else
                     throw convError!T();
             case 1186: // interval
                 static if (isConvertible!(T, core.time.Duration))
@@ -695,7 +695,7 @@ struct Message
             case 1266: // timetz
                 static if (isConvertible!(T, SysTime))
                     return _to!T(readTimeTz);
-                else 
+                else
                     throw convError!T();
             case 2249: // record and other composite types
                 static if (isVariantN!T && T.allowed!(Variant[]))
@@ -729,7 +729,7 @@ struct Message
                         throw convError!T();
                 }
         }
-        
+
         throw convError!T();
     }
 }
@@ -849,12 +849,12 @@ class ServerErrorException: Exception
     /// Contains information about this _error. Aliased to this.
     ResponseMessage error;
     alias error this;
-    
+
     this(string msg)
     {
         super(msg);
     }
-    
+
     this(ResponseMessage error)
     {
         super(error.toString());
@@ -872,55 +872,55 @@ $(LINK2 http://www.postgresql.org/docs/9.0/static/protocol-error-fields.html,her
 class ResponseMessage
 {
     private string[char] fields;
-    
+
     private string getOptional(char type)
     {
         string* p = type in fields;
         return p ? *p : "";
     }
-    
+
     /// Message fields
     @property string severity()
     {
         return fields['S'];
     }
-    
+
     /// ditto
     @property string code()
     {
         return fields['C'];
     }
-    
+
     /// ditto
     @property string message()
     {
         return fields['M'];
     }
-    
+
     /// ditto
     @property string detail()
     {
         return getOptional('D');
     }
-    
+
     /// ditto
     @property string hint()
     {
         return getOptional('H');
     }
-    
+
     /// ditto
     @property string position()
     {
         return getOptional('P');
     }
-    
+
     /// ditto
     @property string internalPosition()
     {
         return getOptional('p');
     }
-    
+
     /// ditto
     @property string internalQuery()
     {
@@ -932,25 +932,25 @@ class ResponseMessage
     {
         return getOptional('W');
     }
-    
+
     /// ditto
     @property string file()
     {
         return getOptional('F');
     }
-    
+
     /// ditto
     @property string line()
     {
         return getOptional('L');
     }
-    
+
     /// ditto
     @property string routine()
     {
         return getOptional('R');
     }
-    
+
     /**
     Returns summary of this message using the most common fields (severity,
     code, message, detail, hint)
@@ -958,15 +958,15 @@ class ResponseMessage
     override string toString()
     {
         string s = severity ~ ' ' ~ code ~ ": " ~ message;
-        
+
         string* detail = 'D' in fields;
         if (detail)
             s ~= "\nDETAIL: " ~ *detail;
-        
+
         string* hint = 'H' in fields;
         if (hint)
             s ~= "\nHINT: " ~ *hint;
-        
+
         return s;
     }
 }
@@ -987,16 +987,16 @@ class PGConnection
         uint[][uint] compositeTypes;
         string[uint][uint] enumTypes;
         bool activeResultSet;
-        
+
         string reservePrepared()
         {
             synchronized (this)
             {
-                
+
                 return to!string(lastPrepared++);
             }
         }
-        
+
         Message getMessage()
         {
 
@@ -1010,17 +1010,17 @@ class PGConnection
 			stream.socket.read(ubi); // message length, doesn't include type byte
 
 			len = bigEndianToNative!int(ubi) - 4;
-            
+
             ubyte[] msg;
             if (len > 0)
             {
                 msg = new ubyte[len];
                 stream.socket.read(msg);
             }
-            
+
             return Message(this, type, msg);
         }
-        
+
         void sendStartupMessage(const string[string] params)
         {
             bool localParam(string key)
@@ -1031,17 +1031,17 @@ class PGConnection
                     default: return false;
                 }
             }
-            
+
             int len = 9; // length (int), version number (int) and parameter-list's delimiter (byte)
-            
+
             foreach (key, value; params)
             {
                 if (localParam(key))
                     continue;
-                
+
                 len += key.length + value.length + 2;
             }
-            
+
             stream.write(len);
             stream.write(0x0003_0000); // version number 3
             foreach (key, value; params)
@@ -1053,7 +1053,7 @@ class PGConnection
             }
 		stream.write(cast(ubyte)0);
 	}
-        
+
         void sendPasswordMessage(string password)
         {
             int len = cast(int)(4 + password.length + 1);
@@ -1062,7 +1062,7 @@ class PGConnection
             stream.write(len);
             stream.writeCString(password);
         }
-        
+
         void sendParseMessage(string statementName, string query, int[] oids)
         {
             int len = cast(int)(4 + statementName.length + 1 + query.length + 1 + 2 + oids.length * 4);
@@ -1072,11 +1072,11 @@ class PGConnection
             stream.writeCString(statementName);
             stream.writeCString(query);
             stream.write(cast(short)oids.length);
-            
+
             foreach (oid; oids)
                 stream.write(oid);
         }
-        
+
         void sendCloseMessage(DescribeType type, string name)
 		{
 			stream.write('C');
@@ -1084,7 +1084,7 @@ class PGConnection
             stream.write(cast(char)type);
             stream.writeCString(name);
         }
-        
+
         void sendTerminateMessage()
 		{
 			stream.write('X');
@@ -1108,7 +1108,7 @@ class PGConnection
                         paramsLen += len;
                     }
                 }
-                
+
                 /*final*/ switch (param.type)
                 {
                     case PGType.INT2: checkParam!short(2); break;
@@ -1129,10 +1129,10 @@ class PGConnection
                     default: assert(0, "Not implemented");
                 }
             }
-            
+
             int len = cast(int)( 4 + portalName.length + 1 + statementName.length + 1 + (hasText ? (params.length*2) : 2) + 2 + 2 +
                 params.length * 4 + paramsLen + 2 + 2 );
-            
+
             stream.write('B');
             stream.write(len);
             stream.writeCString(portalName);
@@ -1150,7 +1150,7 @@ class PGConnection
                 stream.write(cast(short)1); // binary format
             }
             stream.write(cast(short)params.length);
-            
+
             foreach (param; params)
             {
                 if (param.value == null)
@@ -1158,7 +1158,7 @@ class PGConnection
                     stream.write(-1);
                     continue;
                 }
-                
+
                 switch (param.type)
                 {
                     case PGType.INT2:
@@ -1202,13 +1202,13 @@ class PGConnection
 						assert(0, "Not implemented");
                 }
             }
-            
+
             stream.write(cast(short)1); // one result format code
             stream.write(cast(short)1); // binary format
         }
-        
+
         enum DescribeType : char { Statement = 'S', Portal = 'P' }
-        
+
         void sendDescribeMessage(DescribeType type, string name)
 		{
 			stream.write('D');
@@ -1216,7 +1216,7 @@ class PGConnection
             stream.write(cast(char)type);
             stream.writeCString(name);
         }
-        
+
         void sendExecuteMessage(string portalName, int maxRows)
 		{
 			stream.write('E');
@@ -1224,7 +1224,7 @@ class PGConnection
             stream.writeCString(portalName);
             stream.write(cast(int)maxRows);
         }
-        
+
         void sendFlushMessage()
 		{
 			stream.write('H');
@@ -1236,7 +1236,7 @@ class PGConnection
 			stream.write('S');
             stream.write(cast(int)4);
         }
-        
+
         ResponseMessage handleResponseMessage(Message msg)
         {
             enforce(msg.data.length >= 2);
@@ -1244,21 +1244,21 @@ class PGConnection
 			char ftype;
             string fvalue;
             ResponseMessage response = new ResponseMessage;
-            
+
             while (msg.read(ftype), ftype > 0)
             {
                 msg.readCString(fvalue);
                 response.fields[ftype] = fvalue;
             }
-            
+
             return response;
         }
-        
+
         void checkActiveResultSet()
         {
             enforce(!activeResultSet, "There's active result set, which must be closed first.");
         }
-        
+
         void prepare(string statementName, string query, PGParameters params)
         {
             checkActiveResultSet();
@@ -1267,7 +1267,7 @@ class PGConnection
             sendFlushMessage();
 
 	receive:
-            
+
             Message msg = getMessage();
 
 		switch (msg.type)
@@ -1291,11 +1291,11 @@ class PGConnection
             checkActiveResultSet();
             sendCloseMessage(DescribeType.Statement, statementName);
             sendFlushMessage();
-            
+
         receive:
-            
+
             Message msg = getMessage();
-            
+
             switch (msg.type)
             {
                 case 'E':
@@ -1310,7 +1310,7 @@ class PGConnection
                     goto receive;
             }
         }
-        
+
         PGFields bind(string portalName, string statementName, PGParameters params)
         {
             checkActiveResultSet();
@@ -1318,11 +1318,11 @@ class PGConnection
             sendBindMessage(portalName, statementName, params);
             sendDescribeMessage(DescribeType.Portal, portalName);
             sendFlushMessage();
-            
+
         receive:
-            
+
             Message msg = getMessage();
-            
+
             switch (msg.type)
             {
                 case 'E':
@@ -1342,11 +1342,11 @@ class PGConnection
                     short fieldCount;
                     short formatCode;
                     PGField fi;
-                    
+
                     msg.read(fieldCount);
-                    
+
                     fields.length = fieldCount;
-                    
+
                     foreach (i; 0..fieldCount)
                     {
                         msg.readCString(fi.name);
@@ -1356,12 +1356,12 @@ class PGConnection
                         msg.read(fi.typlen);
                         msg.read(fi.modifier);
                         msg.read(formatCode);
-                        
+
                         enforce(formatCode == 1, new Exception("Field's format code returned in RowDescription is not 1 (binary)"));
-                        
+
                         fields[i] = fi;
                     }
-                    
+
                     return cast(PGFields)fields;
                 case 'n':
                     // NoData (response to Describe)
@@ -1371,20 +1371,20 @@ class PGConnection
                     goto receive;
             }
         }
-        
+
         ulong executeNonQuery(string portalName, out uint oid)
         {
             checkActiveResultSet();
             ulong rowsAffected = 0;
-            
+
             sendExecuteMessage(portalName, 0);
             sendSyncMessage();
             sendFlushMessage();
-            
+
         receive:
-            
+
             Message msg = getMessage();
-            
+
             switch (msg.type)
             {
                 case 'E':
@@ -1398,10 +1398,10 @@ class PGConnection
                 case 'C':
                     // CommandComplete
                     string tag;
-                    
+
                     msg.readCString(tag);
 
-                    // GDC indexOf name conflict in std.string and std.algorithm                    
+                    // GDC indexOf name conflict in std.string and std.algorithm
                     auto s1 = std.string.indexOf(tag, ' ');
                     if (s1 >= 0) {
                         switch (tag[0 .. s1]) {
@@ -1421,7 +1421,7 @@ class PGConnection
                                 break;
                          }
                     }
-                    
+
                     goto receive;
 
                 case 'I':
@@ -1435,11 +1435,11 @@ class PGConnection
                     goto receive;
             }
         }
-        
+
         DBRow!Specs fetchRow(Specs...)(ref Message msg, ref PGFields fields)
         {
             alias DBRow!Specs Row;
-            
+
             static if (Row.hasStaticLength)
             {
                 alias Row.fieldTypes fieldTypes;
@@ -1447,7 +1447,7 @@ class PGConnection
                 static string genFieldAssigns() // CTFE
                 {
                     string s = "";
-                    
+
                     foreach (i; 0 .. fieldTypes.length)
                     {
                         s ~= "msg.read(fieldLen);\n";
@@ -1459,17 +1459,17 @@ class PGConnection
                                   ");\n");
                         // text() doesn't work with -inline option, CTFE bug
                     }
-                    
+
                     return s;
                 }
             }
-            
+
             Row row;
             short fieldCount;
             int fieldLen;
-            
+
             msg.read(fieldCount);
-            
+
             static if (Row.hasStaticLength)
             {
                 Row.checkReceivedFieldCount(fieldCount);
@@ -1478,7 +1478,7 @@ class PGConnection
             else
             {
                 row.setLength(fieldCount);
-                
+
                 foreach (i; 0 .. fieldCount)
                 {
                     msg.read(fieldLen);
@@ -1488,18 +1488,18 @@ class PGConnection
                         row[i] = msg.readBaseType!(Row.ElemType)(fields[i].oid, fieldLen);
                 }
             }
-            
+
             return row;
         }
-        
+
         void finalizeQuery()
         {
             Message msg;
-            
+
             do
             {
                 msg = getMessage();
-                
+
                 // TODO: process async notifications
             }
             while (msg.type != 'Z'); // ReadyForQuery
@@ -1508,17 +1508,17 @@ class PGConnection
         PGResultSet!Specs executeQuery(Specs...)(string portalName, ref PGFields fields)
         {
             checkActiveResultSet();
-            
+
             PGResultSet!Specs result = new PGResultSet!Specs(this, fields, &fetchRow!Specs);
-            
+
             ulong rowsAffected = 0;
-            
+
             sendExecuteMessage(portalName, 0);
             sendSyncMessage();
             sendFlushMessage();
-            
+
         receive:
-            
+
             Message msg = getMessage();
 
             switch (msg.type)
@@ -1526,28 +1526,28 @@ class PGConnection
                 case 'D':
                     // DataRow
                     alias DBRow!Specs Row;
-                        
+
                     result.row = fetchRow!Specs(msg, fields);
                     static if (!Row.hasStaticLength)
                         result.row.columnToIndex = &result.columnToIndex;
                     result.validRow = true;
                     result.nextMsg = getMessage();
-                    
+
                     activeResultSet = true;
-                    
+
                     return result;
                 case 'C':
                     // CommandComplete
                     string tag;
-                    
+
                     msg.readCString(tag);
-                    
+
                     auto s2 = lastIndexOf(tag, ' ');
                     if (s2 >= 0)
                     {
                         rowsAffected = to!ulong(tag[s2 + 1 .. $]);
                     }
-                
+
                     goto receive;
                 case 'I':
                     // EmptyQueryResponse
@@ -1567,19 +1567,19 @@ class PGConnection
                     // async notice, notification
                     goto receive;
             }
-            
+
             assert(0);
         }
-        
+
     public:
-        
+
 
         /**
         Opens connection to server.
-        
+
         Params:
         params = Associative array of string keys and values.
-    
+
         Currently recognized parameters are:
         $(UL
             $(LI host - Host name or IP address of the server. Required.)
@@ -1588,11 +1588,11 @@ class PGConnection
             $(LI database - The database to connect to. Defaults to the user name.)
             $(LI options - Command-line arguments for the backend. (This is deprecated in favor of setting individual run-time parameters.))
         )
-    
+
         In addition to the above, any run-time parameter that can be set at backend start time might be listed.
         Such settings will be applied during backend start (after parsing the command-line options if any).
         The values will act as session defaults.
-        
+
         Examples:
         ---
         auto conn = new PGConnection([
@@ -1607,11 +1607,11 @@ class PGConnection
         {
             enforce("host" in params, new ParamException("Required parameter 'host' not found"));
             enforce("user" in params, new ParamException("Required parameter 'user' not found"));
-            
+
             string[string] p = cast(string[string])params;
-            
+
             ushort port = "port" in params? parse!ushort(p["port"]) : 5432;
-            
+
 			 version(Have_vibe_d){
 				stream = new PGStream(connectTCP(params["host"], port));
 			} else {
@@ -1620,9 +1620,9 @@ class PGConnection
 			}
 
             sendStartupMessage(params);
-            
+
         receive:
-            
+
     		Message msg = getMessage();
 
             switch (msg.type)
@@ -1631,19 +1631,19 @@ class PGConnection
                     // ErrorResponse, NoticeResponse
 
                     ResponseMessage response = handleResponseMessage(msg);
-					
+
 				    if (msg.type == 'N')
                         goto receive;
-                    
+
                     throw new ServerErrorException(response);
                 case 'R':
                     // AuthenticationXXXX
                     enforce(msg.data.length >= 4);
-                    
+
                     int atype;
-                    
+
                     msg.read(atype);
-                    
+
                     switch (atype)
                     {
                         case 0:
@@ -1655,7 +1655,7 @@ class PGConnection
                             enforce(msg.data.length == 4);
 
                             sendPasswordMessage(params["password"]);
-                            
+
                             goto receive;
                         case 5:
                             // MD5-hashed password is required, formatted as:
@@ -1668,51 +1668,51 @@ class PGConnection
                             password[0 .. 3] = "md5";
                             password[3 .. $] = MD5toHex(MD5toHex(
                                 params["password"], params["user"]), msg.data[4 .. 8]);
-                            
+
                             sendPasswordMessage(to!string(password));
-                            
+
                             goto receive;
                         default:
                             // non supported authentication type, close connection
                             this.close();
                             throw new Exception("Unsupported authentication type");
                     }
-                    
+
                 case 'S':
                     // ParameterStatus
                     enforce(msg.data.length >= 2);
-                    
+
                     string pname, pvalue;
 
                     msg.readCString(pname);
                     msg.readCString(pvalue);
-                    
+
                     serverParams[pname] = pvalue;
-                    
+
                     goto receive;
-                    
+
                 case 'K':
                     // BackendKeyData
                     enforce(msg.data.length == 8);
-                        
+
                     msg.read(serverProcessID);
                     msg.read(serverSecretKey);
-                    
+
                     goto receive;
-                    
+
                 case 'Z':
                     // ReadyForQuery
                     enforce(msg.data.length == 1);
-                    
+
                     msg.read(cast(char)trStatus);
-                    
+
                     // check for validity
                     switch (trStatus)
                     {
                         case 'I', 'T', 'E': break;
                         default: throw new Exception("Invalid transaction status");
                     }
-                    
+
                     // connection is opened and now it's possible to send queries
                     reloadAllTypes();
                     return;
@@ -1728,7 +1728,7 @@ class PGConnection
             sendTerminateMessage();
             stream.socket.close();
         }
-        
+
         /// Shorthand methods using temporary PGCommand. Semantics is the same as PGCommand's.
         ulong executeNonQuery(string query)
         {
@@ -1736,20 +1736,20 @@ class PGConnection
             return cmd.executeNonQuery();
         }
 
-        /// ditto        
+        /// ditto
         PGResultSet!Specs executeQuery(Specs...)(string query)
         {
             scope cmd = new PGCommand(this, query);
             return cmd.executeQuery!Specs();
         }
-        
+
         /// ditto
         DBRow!Specs executeRow(Specs...)(string query, bool throwIfMoreRows = true)
         {
             scope cmd = new PGCommand(this, query);
             return cmd.executeRow!Specs(throwIfMoreRows);
         }
-        
+
         /// ditto
         T executeScalar(T)(string query, bool throwIfMoreRows = true)
         {
@@ -1762,29 +1762,29 @@ class PGConnection
             auto cmd = new PGCommand(this, "SELECT oid, typelem FROM pg_type WHERE typcategory = 'A'");
             auto result = cmd.executeQuery!(uint, "arrayOid", uint, "elemOid");
             scope(exit) result.close;
-            
+
             arrayTypes = null;
-            
+
             foreach (row; result)
             {
                 arrayTypes[row.arrayOid] = row.elemOid;
             }
-            
+
             arrayTypes.rehash;
         }
-        
+
         void reloadCompositeTypes()
         {
-            auto cmd = new PGCommand(this, "SELECT a.attrelid, a.atttypid FROM pg_attribute a JOIN pg_type t ON 
+            auto cmd = new PGCommand(this, "SELECT a.attrelid, a.atttypid FROM pg_attribute a JOIN pg_type t ON
                                      a.attrelid = t.typrelid WHERE a.attnum > 0 ORDER BY a.attrelid, a.attnum");
             auto result = cmd.executeQuery!(uint, "typeOid", uint, "memberOid");
             scope(exit) result.close;
 
             compositeTypes = null;
-            
+
             uint lastOid = 0;
             uint[]* memberOids;
-            
+
             foreach (row; result)
             {
                 if (row.typeOid != lastOid)
@@ -1792,44 +1792,44 @@ class PGConnection
                     compositeTypes[lastOid = row.typeOid] = new uint[0];
                     memberOids = &compositeTypes[lastOid];
                 }
-                
+
                 *memberOids ~= row.memberOid;
             }
-            
+
             compositeTypes.rehash;
         }
-        
+
         void reloadEnumTypes()
         {
             auto cmd = new PGCommand(this, "SELECT enumtypid, oid, enumlabel FROM pg_enum ORDER BY enumtypid, oid");
             auto result = cmd.executeQuery!(uint, "typeOid", uint, "valueOid", string, "valueLabel");
             scope(exit) result.close;
-            
+
             enumTypes = null;
-            
+
             uint lastOid = 0;
             string[uint]* enumValues;
-            
+
             foreach (row; result)
             {
                 if (row.typeOid != lastOid)
                 {
                     if (lastOid > 0)
                         (*enumValues).rehash;
-                    
+
                     enumTypes[lastOid = row.typeOid] = null;
                     enumValues = &enumTypes[lastOid];
                 }
-                
+
                 (*enumValues)[row.valueOid] = row.valueLabel;
             }
-            
+
             if (lastOid > 0)
                 (*enumValues).rehash;
-            
+
             enumTypes.rehash;
         }
-        
+
         void reloadAllTypes()
         {
             // todo: make simpler type lists, since we need only oids of types (without their members)
@@ -1846,7 +1846,7 @@ class PGParameter
     immutable short index;
     immutable PGType type;
     private Variant _value;
-    
+
     /// Value bound to this parameter
     @property Variant value()
     {
@@ -1858,7 +1858,7 @@ class PGParameter
         params.changed = true;
         return _value = Variant(v);
     }
-    
+
     private this(PGParameters params, short index, PGType type)
     {
         enforce(index > 0, new ParamException("Parameter's index must be > 0"));
@@ -1874,33 +1874,33 @@ class PGParameters
     private PGParameter[short] params;
     private PGCommand cmd;
     private bool changed;
-    
+
     private int[] getOids()
     {
         short[] keys = params.keys;
         sort(keys);
-        
+
         int[] oids = new int[params.length];
-        
+
         foreach (int i, key; keys)
         {
             oids[i] = params[key].type;
         }
-        
+
         return oids;
     }
-    
+
     ///
     @property short length()
     {
         return cast(short)params.length;
     }
-    
+
     private this(PGCommand cmd)
     {
         this.cmd = cmd;
     }
-    
+
     /**
     Creates and returns new parameter.
     Examples:
@@ -1909,7 +1909,7 @@ class PGParameters
     auto cmd = new PGCommand(conn, "INSERT INTO users (name, surname) VALUES ($ 1, $ 2)");
     cmd.parameters.add(1, PGType.TEXT).value = "John";
     cmd.parameters.add(2, PGType.TEXT).value = "Doe";
-    
+
     assert(cmd.executeNonQuery == 1);
     ---
     */
@@ -1919,9 +1919,9 @@ class PGParameters
         changed = true;
         return params[index] = new PGParameter(this, index, type);
     }
-    
+
     // todo: remove()
-    
+
     PGParameter opIndex(short index)
     {
         return params[index];
@@ -1934,11 +1934,11 @@ class PGParameters
         foreach (number; sort(params.keys))
         {
             result = dg(params[number]);
-            
+
             if (result)
                 break;
         }
-        
+
         return result;
     }
 }
@@ -1973,19 +1973,19 @@ class PGCommand
     private string preparedName;
     private uint _lastInsertOid;
     private bool prepared;
-    
+
     /// List of parameters bound to this command
     @property PGParameters parameters()
     {
         return params;
     }
-    
+
     /// List of fields that will be returned from the server. Available after successful call to bind().
     @property PGFields fields()
     {
         return _fields;
     }
-    
+
     /**
     Checks if this is query or non query command. Available after successful call to bind().
     Returns: true if server returns at least one field (column). Otherwise false.
@@ -1995,13 +1995,13 @@ class PGCommand
         enforce(_fields !is null, new Exception("bind() must be called first."));
         return _fields.length > 0;
     }
-    
+
     /// Returns: true if command is currently prepared, otherwise false.
     @property bool isPrepared()
     {
         return prepared;
     }
-    
+
     /// Query assigned to this command.
     @property string query()
     {
@@ -2013,13 +2013,13 @@ class PGCommand
         enforce(!prepared, "Can't change query for prepared statement.");
         return _query = query;
     }
-    
+
     /// If table is with OIDs, it contains last inserted OID.
     @property uint lastInsertOid()
     {
         return _lastInsertOid;
     }
-    
+
     this(PGConnection conn, string query = "")
     {
         this.conn = conn;
@@ -2029,7 +2029,7 @@ class PGCommand
         preparedName = "";
         prepared = false;
     }
-    
+
     /// Prepare this statement, i.e. cache query plan.
     void prepare()
     {
@@ -2039,7 +2039,7 @@ class PGCommand
         prepared = true;
         params.changed = true;
     }
-    
+
     /// Unprepare this statement. Goes back to normal query planning.
     void unprepare()
     {
@@ -2049,10 +2049,10 @@ class PGCommand
         prepared = false;
         params.changed = true;
     }
-    
+
     /**
     Binds values to parameters and updates list of returned fields.
-    
+
     This is normally done automatically, but it may be useful to check what fields
     would be returned from a query, before executing it.
     */
@@ -2062,7 +2062,7 @@ class PGCommand
         _fields = conn.bind(preparedName, preparedName, params);
         params.changed = false;
     }
-    
+
     private void checkPrepared(bool bind)
     {
         if (!prepared)
@@ -2076,13 +2076,13 @@ class PGCommand
             }
         }
     }
-    
+
     private void checkBound()
     {
         if (params.changed)
             bind();
     }
-    
+
     /**
     Executes a non query command, i.e. query which doesn't return any rows. Commonly used with
     data manipulation commands, such as INSERT, UPDATE and DELETE.
@@ -2103,7 +2103,7 @@ class PGCommand
         checkBound();
         return conn.executeNonQuery(preparedName, _lastInsertOid);
     }
-    
+
     /**
     Executes query which returns row sets, such as SELECT command.
     Params:
@@ -2116,7 +2116,7 @@ class PGCommand
         checkBound();
         return conn.executeQuery!Specs(preparedName, _fields);
     }
-    
+
     /**
     Executes query and returns only first row of the result.
     Params:
@@ -2144,7 +2144,7 @@ class PGCommand
         }
         return row;
     }
-    
+
     /**
     Executes query returning exactly one row and field. By default, returns Variant type.
     Params:
@@ -2179,7 +2179,7 @@ class PGResultSet(Specs...)
 {
     alias DBRow!Specs Row;
     alias Row delegate(ref Message msg, ref PGFields fields) FetchRowDelegate;
-    
+
     private FetchRowDelegate fetchRow;
     private PGConnection conn;
     private PGFields fields;
@@ -2198,26 +2198,26 @@ class PGResultSet(Specs...)
         foreach (i, field; fields)
         {
             size_t[]* indices = field.name in columnMap;
-            
+
             if (indices)
                 *indices ~= i;
             else
                 columnMap[field.name] = [i];
         }
     }
-    
+
     private size_t columnToIndex(string column, size_t index)
     {
         size_t[]* indices = column in columnMap;
         enforce(indices, "Unknown column name");
         return (*indices)[index];
     }
-    
+
     pure nothrow bool empty()
     {
         return !validRow;
     }
-    
+
     void popFront()
     {
         if (nextMsg.type == 'D')
@@ -2231,12 +2231,12 @@ class PGResultSet(Specs...)
         else
             validRow = false;
     }
-    
+
     pure nothrow Row front()
     {
         return row;
     }
-    
+
     /// Closes current result set. It must be closed before issuing another query on the same connection.
     void close()
     {
@@ -2244,7 +2244,7 @@ class PGResultSet(Specs...)
             conn.finalizeQuery();
         conn.activeResultSet = false;
     }
-    
+
     int opApply(int delegate(ref Row row) dg)
     {
         int result = 0;
@@ -2253,14 +2253,14 @@ class PGResultSet(Specs...)
         {
             result = dg(row);
             popFront;
-            
+
             if (result)
                 break;
         }
-        
+
         return result;
     }
-    
+
     int opApply(int delegate(ref size_t i, ref Row row) dg)
     {
         int result = 0;
@@ -2271,11 +2271,11 @@ class PGResultSet(Specs...)
             result = dg(i, row);
             popFront;
             i++;
-            
+
             if (result)
                 break;
         }
-        
+
         return result;
     }
 }
@@ -2284,21 +2284,21 @@ class PGResultSet(Specs...)
 version(Have_vibe_d)
 {
 	import vibe.core.connectionpool;
-	
+
 	class PostgresDB {
 		private {
 			string[string] m_params;
 			ConnectionPool!PGConnection m_pool;
 		}
-		
+
 		this(string[string] conn_params)
 		{
 			m_params = conn_params.dup;
 			m_pool = new ConnectionPool!PGConnection(&createConnection);
 		}
-		
+
 		auto lockConnection() { return m_pool.lockConnection(); }
-		
+
 		private PGConnection createConnection()
 		{
 			return new PGConnection(m_params);

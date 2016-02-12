@@ -25,7 +25,7 @@ int main(string[] argv)
     // using strings, multi-line strings, or string imports
     cmd.query = import("test-create.sql");
     cmd.executeNonQuery;
-    
+
     cmd.query = "INSERT INTO MyTest (name, value) VALUES ('foo', 1);";
     assert(cmd.executeNonQuery == 1); // 1 row inserted
 
