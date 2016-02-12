@@ -12,6 +12,8 @@ Authors: Piotr Szturmaj
 
 import std.conv, std.traits, std.typecons, std.typetuple, std.variant;
 
+static import std.typecons;
+
 /**
 Data row returned from database servers.
 
@@ -249,6 +251,8 @@ struct DBRow(Specs...)
             {
                 static if (isStaticArray!T)
                     base[index] = null;
+                else static if (is(typeof(base.tupleof[index]) == Option!U, U))
+                    base.tupleof[index].nullify;
                 else
                     base.tupleof[index] = null;
             }
@@ -342,9 +346,13 @@ static assert(isVariantN!Variant);
 static assert(isVariantN!(Algebraic!(int, string)));
 static assert(isVariantN!(Nullable!int));
 
+// an alias is used due to a bug in the compiler not allowing fully
+// qualified names in an is expression
+private alias Option = std.typecons.Nullable;
+
 template isNullable(T)
 {
-    static if ((isVariantN!T && T.allowed!(void*)) || is(T X == Nullable!U, U))
+    static if ((isVariantN!T && T.allowed!(void*)) || is(T X == Nullable!U, U) || is(T == Option!U, U))
         enum isNullable = true;
     else
         enum isNullable = false;
