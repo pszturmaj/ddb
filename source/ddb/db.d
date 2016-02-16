@@ -11,6 +11,7 @@ Authors: Piotr Szturmaj
 //module db;
 
 import std.conv, std.traits, std.typecons, std.typetuple, std.variant;
+import std.format;
 
 static import std.typecons;
 
@@ -289,7 +290,7 @@ struct DBRow(Specs...)
         static pure void checkReceivedFieldCount(int fieldCount)
         {
             if (fieldTypes.length != fieldCount)
-                throw new Exception("Received field count is not equal to " ~ T.stringof ~ "'s field count");
+                throw new Exception(format("Received field(%s) count is not equal to %s's field count(%s)", fieldCount, T.stringof, fieldTypes.length));
         }
     }
 
