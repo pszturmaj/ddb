@@ -1,5 +1,3 @@
-module ddb.postgres;
-
 /**
 PostgreSQL client implementation.
 
@@ -94,6 +92,7 @@ with vibe.d use -version=Have_vibe_d and use a ConnectionPool (PostgresDB Object
 ---
 without vibe.d you can use std sockets with PGConnection object
 
+---
 import std.stdio;
 import ddb.postgres;
 
@@ -152,8 +151,7 @@ PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERS
 CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS,
 OR MODIFICATIONS.
 */
-
-
+module ddb.postgres;
 
 version (Have_vibe_d) {
 	import vibe.core.net;
