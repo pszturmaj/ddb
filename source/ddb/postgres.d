@@ -1011,9 +1011,12 @@ class PGConnection
 
 			len = bigEndianToNative!int(ubi) - 4;
             
-            ubyte[] msg = new ubyte[len];
-
-            stream.socket.read(msg);
+            ubyte[] msg;
+            if (len > 0)
+            {
+                msg = new ubyte[len];
+                stream.socket.read(msg);
+            }
             
             return Message(this, type, msg);
         }
