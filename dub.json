@@ -5,7 +5,11 @@
 	"copyright": "Copyright © 2013 Piotr Szturmaj",
 	"homepage": "https://github.com/pszturmaj/",
 	"authors": ["Piotr Szturmaj"],
+
 	"dependencies": {
-		"vibe-d": {"version": ">=0.7.19", "optional": true}
+		"vibe-d:core": {
+			"version": ">=0.7.29",
+			"optional": true
+		}
 	}
 }
