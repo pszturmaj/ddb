@@ -63,7 +63,7 @@ $(TABLE
 )
 
 Examples:
-with vibe.d use -version=Have_vibe_d and use a ConnectionPool (PostgresDB Object & lockConnection)
+with vibe.d use -version=Have_vibe_d_core and use a ConnectionPool (PostgresDB Object & lockConnection)
 ---
 
 	auto pdb = new PostgresDB([
@@ -153,7 +153,7 @@ OR MODIFICATIONS.
 */
 module ddb.postgres;
 
-version (Have_vibe_d) {
+version (Have_vibe_d_core) {
 	import vibe.core.net;
 	import vibe.core.stream;
 } else {
@@ -185,10 +185,10 @@ const PGEpochDateTime = DateTime(2000, 1, 1, 0, 0, 0);
 class PGStream
 {
 	private {
-		version (Have_vibe_d) TCPConnection m_socket;
+		version (Have_vibe_d_core) TCPConnection m_socket;
 		else SocketStream m_socket;
 	}
-	version (Have_vibe_d){
+	version (Have_vibe_d_core){
 		@property TCPConnection socket() { return m_socket; }
 		this(TCPConnection socket)
 	    {
@@ -1610,7 +1610,7 @@ class PGConnection
 
             ushort port = "port" in params? parse!ushort(p["port"]) : 5432;
 
-			 version(Have_vibe_d){
+			 version(Have_vibe_d_core){
 				stream = new PGStream(connectTCP(params["host"], port));
 			} else {
 				stream = new PGStream(new SocketStream(new TcpSocket));
@@ -2279,7 +2279,7 @@ class PGResultSet(Specs...)
 }
 
 
-version(Have_vibe_d)
+version(Have_vibe_d_core)
 {
 	import vibe.core.connectionpool;
 
@@ -2308,7 +2308,7 @@ else
 	class PostgresDB() {
 		static assert(false,
 		              "The 'PostgresDB' connection pool requires Vibe.d and therefore "~
-		              "must be used with -version=Have_vibe_d"
+		              "must be used with -version=Have_vibe_d_core"
 		              );
 	}
 }
