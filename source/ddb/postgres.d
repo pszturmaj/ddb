@@ -835,9 +835,9 @@ enum PGType : int
 
 class ParamException : Exception
 {
-    this(string msg)
+    this(string msg, string fn = __FILE__, size_t ln = __LINE__) @safe pure nothrow
     {
-        super(msg);
+        super(msg, fn, ln);
     }
 }
 
@@ -848,14 +848,14 @@ class ServerErrorException: Exception
     ResponseMessage error;
     alias error this;
 
-    this(string msg)
+    this(string msg, string fn = __FILE__, size_t ln = __LINE__) @safe pure nothrow
     {
-        super(msg);
+        super(msg, fn, ln);
     }
 
-    this(ResponseMessage error)
+    this(ResponseMessage error, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(error.toString());
+        super(error.toString(), fn, ln);
         this.error = error;
     }
 }
