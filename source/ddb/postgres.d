@@ -738,7 +738,7 @@ template _to(T)
     static if (isVariantN!T)
         T _to(S)(S value) { T t = value; return t; }
     else
-        T _to(A...)(A args) { return toImpl!T(args); }
+        T _to(A...)(A args) { return std.conv.to!T(args); }
 }
 
 template isConvertible(T, S)
