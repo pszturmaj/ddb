@@ -1158,6 +1158,7 @@ class PGConnection
                         break;
                     case PGType.DATE:
                         paramsLen += 4; break;
+                    case PGType.FLOAT4: checkParam!float(4); break;
                     default: assert(0, "Not implemented");
                 }
             }
@@ -1204,6 +1205,10 @@ class PGConnection
                     case PGType.INT8:
                         stream.write(cast(int)8);
                         stream.write(param.value.coerce!long);
+                        break;
+                    case PGType.FLOAT4:
+                        stream.write(cast(int)4);
+                        stream.write(param.value.coerce!float);
                         break;
                     case PGType.TEXT:
                         auto s = param.value.coerce!string;
