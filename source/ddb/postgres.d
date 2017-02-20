@@ -1159,7 +1159,7 @@ class PGConnection
                     case PGType.DATE:
                         paramsLen += 4; break;
                     case PGType.FLOAT4: checkParam!float(4); break;
-                    case PGType.FLOAT8: checkParam!float(8); break;
+                    case PGType.FLOAT8: checkParam!double(8); break;
                     default: assert(0, "Not implemented");
                 }
             }
