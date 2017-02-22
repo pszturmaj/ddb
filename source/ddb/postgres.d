@@ -1287,8 +1287,11 @@ class PGConnection
             string fvalue;
             ResponseMessage response = new ResponseMessage;
 
-            while (msg.read(ftype), ftype > 0)
+            while (true)
             {
+                msg.read(ftype);
+                if(ftype <=0) break;
+
                 msg.readCString(fvalue);
                 response.fields[ftype] = fvalue;
             }
