@@ -1218,7 +1218,7 @@ class PGConnection
                     case PGType.TEXT:
                         auto s = param.value.coerce!string;
                         stream.write(cast(int) s.length);
-                        stream.write(cast(ubyte[]) s);
+                        if(s.length) stream.write(cast(ubyte[]) s);
                         break;
                     case PGType.BYTEA:
                         auto s = param.value;
