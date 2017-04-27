@@ -1160,7 +1160,8 @@ class PGConnection
                         paramsLen += 4; break;
                     case PGType.FLOAT4: checkParam!float(4); break;
                     case PGType.FLOAT8: checkParam!double(8); break;
-                    default: assert(0, "Not implemented");
+                    case PGType.BOOLEAN: checkParam!bool(1); break;
+                    default: assert(0, "Not implemented " ~ to!string(param.type));
                 }
             }
 
@@ -1240,8 +1241,12 @@ class PGConnection
                         stream.write(cast(int) 4);
                         stream.write(Date.fromISOString(param.value.coerce!string));
                         break;
+                    case PGType.BOOLEAN:
+                        stream.write(cast(int) 1);
+                        stream.write(param.value.coerce!bool);
+                        break;
                     default:
-						assert(0, "Not implemented");
+						assert(0, "Not implemented " ~ to!string(param.type));
                 }
             }
 
