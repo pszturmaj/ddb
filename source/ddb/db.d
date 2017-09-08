@@ -321,7 +321,7 @@ template isCompositeType(T)
         enum isCompositeType = false;
 }
 
-template Nullable(T)
+deprecated("Please used std.typecons.Nullable instead") template Nullable(T)
     if (!__traits(compiles, { T t = null; }))
 {
     /*
