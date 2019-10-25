@@ -225,7 +225,10 @@ class PGStream
         {
             if (buffer.length > 0)
             {
-                m_socket.receive(buffer);
+                ptrdiff_t so_far = 0;
+                do {
+                    so_far += m_socket.receive(buffer[so_far .. $]);
+                } while (so_far < buffer.length);
             }
         }
     }
