@@ -1937,7 +1937,7 @@ class PGParameters
 
         int[] oids = new int[params.length];
 
-        foreach (int i, key; keys)
+        foreach (size_t i, key; keys)
         {
             oids[i] = params[key].type;
         }
