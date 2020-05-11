@@ -817,7 +817,7 @@ static assert(arrayDimensions!(int[]) == 1);
 static assert(arrayDimensions!(int[][]) == 2);
 static assert(arrayDimensions!(int[][][]) == 3);
 
-enum TransactionStatus : char { OutsideTransaction = 'I', InsideTransaction = 'T', InsideFailedTransaction = 'E' };
+enum TransactionStatus : char { OutsideTransaction = 'I', InsideTransaction = 'T', InsideFailedTransaction = 'E' }
 
 enum string[int] baseTypes = [
     // boolean types
@@ -868,7 +868,7 @@ enum PGType : int
 
     JSON = 114,
     JSONARRAY = 199
-};
+}
 
 class ParamException : Exception
 {
