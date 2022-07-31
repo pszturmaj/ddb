@@ -1661,9 +1661,7 @@ class PGConnection
             enforce("host" in params, new ParamException("Required parameter 'host' not found"));
             enforce("user" in params, new ParamException("Required parameter 'user' not found"));
 
-            string[string] p = cast(string[string])params.dup;
-
-            ushort port = "port" in params? parse!ushort(p["port"]) : 5432;
+            ushort port = "port" in params ? to!ushort(params["port"]) : 5432;
 
             version(Have_vibe_d_core)
             {
